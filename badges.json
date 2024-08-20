@@ -1,0 +1,16 @@
+{
+    "david": {
+        "display_name": "David Austin",
+        "mentor": true,
+        "parent": false,
+        "photo_url": "https://www.google.com/david",
+        "student": false
+    },
+    "justin": {
+        "display_name": "Justin Buist",
+        "mentor": true,
+        "parent": false,
+        "photo_url": "https://www.google.com",
+        "student": false
+    }
+}
