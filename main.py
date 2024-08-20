@@ -2,11 +2,12 @@
 # Using flake8 for linting
 import wx
 import wx.grid as wxgrid
-
-from datetime import date, time, datetime
-
 import lib.tritime as libtt
 
+from datetime import datetime
+
+# TODO: This shold peridoically refresh the badges if we're connected to a
+# networked system; ie: backed with a database like CosmosDB.
 badges = libtt.get_badges()
 
 
@@ -16,9 +17,10 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, id):
         wx.Frame.__init__(self, parent, id,
                           'TriTime', size=(1024, 800))
-        self.badge_num_input = wx.TextCtrl(self, -1, 'Badge Number')
+        self.badge_num_input = wx.TextCtrl(self, -1, '')
         self.badge_num_input.Bind(wx.EVT_TEXT, self.on_badge_num_change)
         self.greeting_label = wx.StaticText(self, -1, 'Welcome to TriTime')
+
         # Add badge_num_input to a sizer
         vbox = wx.BoxSizer(wx.VERTICAL)
         self.in_btn = wx.Button(self, label='In')
@@ -33,8 +35,9 @@ class MainWindow(wx.Frame):
         # Set the column labels
         self.check_time_grid.SetColLabelValue(0, "Time In")
         self.check_time_grid.SetColLabelValue(1, "Time Out")
-        self.check_time_grid.SetColLabelValue(2, "Duration (s)")
+        self.check_time_grid.SetColLabelValue(2, "Duration (hrs)")
         self.check_time_grid.HideRowLabels()
+        # self.check_time_grid.Hide()
         for b in [self.in_btn, self.out_btn, self.check_time]:
             b.Disable()
 
@@ -54,8 +57,6 @@ class MainWindow(wx.Frame):
         self.SetSizer(vbox)
         self.Layout()
         self.Update()
-
-        # Add panel to frame
 
     def clear_input(self):
         self.badge_num_input.SetValue('')
@@ -82,10 +83,14 @@ class MainWindow(wx.Frame):
             self.in_btn.Disable()
             self.out_btn.Disable()
             self.check_time.Disable()
+            self.check_time_grid.Hide()
+            """
             gridrows = self.check_time_grid.GetNumberRows()
             if gridrows > 0:
                 # Delete all the rows
                 self.check_time_grid.DeleteRows(0, gridrows)
+            """
+            pass
 
     def punch_in(self, event):
         print(f'Punch In {self.entered_badge}')
@@ -121,15 +126,19 @@ class MainWindow(wx.Frame):
                 outstr = str(row_data['ts_out'])
             if 'duration' in row_data:
                 d = row_data['duration']
-                total_duration += d if d is not None else 0
-                duration = str(d)
+                if d is None:
+                    d = 0
+                total_duration += d
+                duration = str(round(d/3600, 2))
             self.check_time_grid.SetCellValue(row_index, 0, instr)
             self.check_time_grid.SetCellValue(row_index, 1, outstr)
             self.check_time_grid.SetCellValue(row_index, 2, duration)
 
-        self.check_time_grid.SetCellValue(new_rows - 1, 2, str(total_duration))
+        self.check_time_grid.SetCellValue(new_rows-1, 2,
+                                          str(round(total_duration/3600, 2)))
 
         # Fit the grid to the size of the window
+        self.check_time_grid.Show()
         self.check_time_grid.Layout()
         self.check_time_grid.Update()
         self.check_time_grid.AutoSize()
