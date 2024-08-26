@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 # Using flake8 for linting
 import wx
+import requests
 import wx.grid as wxgrid
 import lib.tritime as libtt
 
+from io import BytesIO
 from datetime import datetime
 
 # TODO: This shold peridoically refresh the badges if we're connected to a
 # networked system; ie: backed with a database like CosmosDB.
 badges = libtt.get_badges()
+active_badges = {}
+
+
+def download_image(self, url, width=64, height=64):
+    response = requests.get(url)
+    response.raise_for_status()  # Ensure the request was successful
+
+    # Convert the image data into a wx.Bitmap
+    image_data = BytesIO(response.content)
+    image = wx.Image(image_data).Scale(width, height, wx.IMAGE_QUALITY_HIGH)
+    return wx.Bitmap(image)
 
 
 class MainWindow(wx.Frame):
@@ -17,8 +30,10 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, id):
         wx.Frame.__init__(self, parent, id,
                           'TriTime', size=(1024, 800))
-        self.badge_num_input = wx.TextCtrl(self, -1, '')
+        self.badge_num_input = wx.TextCtrl(self, -1, '',
+                                           style=wx.TE_PROCESS_ENTER)
         self.badge_num_input.Bind(wx.EVT_TEXT, self.on_badge_num_change)
+        self.badge_num_input.Bind(wx.EVT_TEXT_ENTER, self.on_badge_num_enter)
         self.greeting_label = wx.StaticText(self, -1, 'Welcome to TriTime')
 
         # Add badge_num_input to a sizer
@@ -31,7 +46,6 @@ class MainWindow(wx.Frame):
         self.check_time.Bind(wx.EVT_BUTTON, self.check_time_season)
         self.check_time_grid = wxgrid.Grid(self)
         self.check_time_grid.CreateGrid(0, 3)
-
         # Set the column labels
         self.check_time_grid.SetColLabelValue(0, "Time In")
         self.check_time_grid.SetColLabelValue(1, "Time Out")
@@ -41,6 +55,8 @@ class MainWindow(wx.Frame):
         for b in [self.in_btn, self.out_btn, self.check_time]:
             b.Disable()
 
+        self.active_badge_sizer = wx.GridSizer(4, 20, 10)
+
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(self.in_btn)
         hbox.Add(wx.SizerItem(20, 20))
@@ -48,15 +64,21 @@ class MainWindow(wx.Frame):
         hbox.Add(wx.SizerItem(20, 20))
         hbox.Add(self.check_time)
         hbox.Add(wx.SizerItem(20, 20))
-        hbox.Add(self.check_time_grid)
+        hbox.Add(self.check_time_grid, wx.EXPAND)
+        hbox.Add(wx.SizerItem(20, 20))
+        hbox.Add(self.active_badge_sizer, border=10, flag=wx.EXPAND)
 
         vbox.Add(self.badge_num_input, 0, wx.EXPAND)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
-        vbox.Add(hbox)
+        vbox.Add(hbox, border=5)
         # Add sizer to panel
         self.SetSizer(vbox)
         self.Layout()
         self.Update()
+
+        for bnum, badge in badges.items():
+            if badge['status'] == 'in':
+                self.add_badge_to_grid(bnum)
 
     def clear_input(self):
         self.badge_num_input.SetValue('')
@@ -72,8 +94,11 @@ class MainWindow(wx.Frame):
                 f'Welcome {badge_data["display_name"]}'
             )
             self.entered_badge = badge_num
-            self.in_btn.Enable()
-            self.out_btn.Enable()
+            status = badge_data['status']
+            if status != 'in':
+                self.in_btn.Enable()
+            if status != 'out':
+                self.out_btn.Enable()
             self.check_time.Enable()
         else:
             self.greeting_label.SetLabel(
@@ -92,15 +117,55 @@ class MainWindow(wx.Frame):
             """
             pass
 
+    def on_badge_num_enter(self, event):
+        print('enter hit')
+
+    # TODO: Maybe cache these locally, or offer an 'oops' image if the
+    # network connection is down.
+    def add_badge_to_grid(self, badge_num):
+        badge = badges[badge_num]
+        badge_name = badge['display_name']
+        img_url = badge['photo_url']
+        img = download_image(self, img_url)
+        bmp = wx.StaticBitmap(self, -1, img)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        btn = wx.Button(self, label=badge_name)
+        btn.Bind(wx.EVT_BUTTON, lambda event: self.punch_out(event, badge_num))
+        vbox.Add(bmp)
+        vbox.Add(btn)
+        active_badges[badge_num] = vbox
+        self.active_badge_sizer.Add(vbox)
+        self.Layout()
+        self.Update()
+        print(f'Adding badge {badge_name} / {img_url} to grid')
+
+    # TODO: This is not working; UGH!
+    def remove_badge_from_grid(self, badge_num):
+        print('removing')
+        # Now remove from grid?
+        vbox = active_badges[badge_num]
+        self.active_badge_sizer.Detach(vbox)
+        vbox.Destroy()
+        del active_badges[badge_num]
+        self.active_badge_sizer.Layout()
+        self.Layout()
+
     def punch_in(self, event):
+        global badges
         print(f'Punch In {self.entered_badge}')
         libtt.punch_in(self.entered_badge, datetime.now())
+        self.add_badge_to_grid(self.entered_badge)
+        badges = libtt.get_badges()
         self.clear_input()
 
-    def punch_out(self, event):
-        print(f'Punch Out {self.entered_badge}')
-        libtt.punch_out(self.entered_badge, datetime.now())
-        libtt.tabulate_badge(self.entered_badge)
+    def punch_out(self, event, badge_num=None):
+        global badges
+        badge_num = self.entered_badge if badge_num is None else badge_num
+        print(f'Punch Out {badge_num}')
+        libtt.punch_out(badge_num, datetime.now())
+        libtt.tabulate_badge(badge_num)
+        self.remove_badge_from_grid(badge_num)
+        badges = libtt.get_badges()
         self.clear_input()
 
     def check_time_season(self, event):
@@ -117,8 +182,8 @@ class MainWindow(wx.Frame):
         # Populate the grid with data
         total_duration = 0
         for row_index, row_data in enumerate(punch_data):
-            instr = ''
-            outstr = ''
+            instr = 'N/A - Error'
+            outstr = 'N/A - Error'
             duration = ''
             if 'ts_in' in row_data:
                 instr = str(row_data['ts_in'])
@@ -142,6 +207,8 @@ class MainWindow(wx.Frame):
         self.check_time_grid.Layout()
         self.check_time_grid.Update()
         self.check_time_grid.AutoSize()
+        self.Layout()
+        self.Update()
 
 
 # here's how we fire up the wxPython app
