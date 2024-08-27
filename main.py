@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # Using flake8 for linting
+import os
 import wx
 import requests
+import base64
 import wx.grid as wxgrid
 import lib.tritime as libtt
 
@@ -16,12 +18,20 @@ active_badges = {}
 
 def download_image(self, url, width=64, height=64):
     response = requests.get(url)
-    response.raise_for_status()  # Ensure the request was successful
+    try:
+        response.raise_for_status()  # Ensure the request was successful
 
-    # Convert the image data into a wx.Bitmap
-    image_data = BytesIO(response.content)
-    image = wx.Image(image_data).Scale(width, height, wx.IMAGE_QUALITY_HIGH)
-    return wx.Bitmap(image)
+        # Convert the image data into a wx.Bitmap
+        image_data = BytesIO(response.content)
+        image = wx.Image(image_data).Scale(width, height,
+                                           wx.IMAGE_QUALITY_HIGH)
+        valid_image = True
+    except requests.exceptions.RequestException as e:
+        print(e)
+        image = wx.Image()
+        image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
+        valid_image = False
+    return image, valid_image
 
 
 class MainWindow(wx.Frame):
@@ -76,6 +86,16 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.Update()
 
+        self.update_active_badges()
+
+    def clear_active_badges(self):
+        print('clearing')
+        self.active_badge_sizer.Clear(True)
+        self.Layout()
+        self.Update()
+
+    def update_active_badges(self):
+        self.clear_active_badges()
         for bnum, badge in badges.items():
             if badge['status'] == 'in':
                 self.add_badge_to_grid(bnum)
@@ -118,15 +138,32 @@ class MainWindow(wx.Frame):
             pass
 
     def on_badge_num_enter(self, event):
-        print('enter hit')
+        badge_num = event.GetString()
+        valid_badges = badges.keys()
+        print(f'Badge Number: {badge_num}')
+        if badge_num in valid_badges:
+            badge_data = badges[badge_num]
+            if badge_data['status'] == 'in':
+                self.punch_out(event)
+            elif badge_data['status'] == 'out':
+                self.punch_in(event)
 
     # TODO: Maybe cache these locally, or offer an 'oops' image if the
     # network connection is down.
     def add_badge_to_grid(self, badge_num):
         badge = badges[badge_num]
         badge_name = badge['display_name']
-        img_url = badge['photo_url']
-        img = download_image(self, img_url)
+        cached_image_filename = f'cached_photos/{badge_num}.png'
+        if os.path.exists(cached_image_filename):
+            img = wx.Image()
+            img.LoadFile(cached_image_filename, wx.BITMAP_TYPE_PNG)
+        else:
+            img_url = badge['photo_url']
+            img, should_cache = download_image(self, img_url)
+            if should_cache:
+                img.SaveFile(f'cached_photos/{badge_num}.png',
+                             wx.BITMAP_TYPE_PNG)
+        img = wx.Bitmap(img)
         bmp = wx.StaticBitmap(self, -1, img)
         vbox = wx.BoxSizer(wx.VERTICAL)
         btn = wx.Button(self, label=badge_name)
@@ -137,7 +174,6 @@ class MainWindow(wx.Frame):
         self.active_badge_sizer.Add(vbox)
         self.Layout()
         self.Update()
-        print(f'Adding badge {badge_name} / {img_url} to grid')
 
     # TODO: This is not working; UGH!
     def remove_badge_from_grid(self, badge_num):
@@ -153,19 +189,17 @@ class MainWindow(wx.Frame):
     def punch_in(self, event):
         global badges
         print(f'Punch In {self.entered_badge}')
-        libtt.punch_in(self.entered_badge, datetime.now())
+        badges = libtt.punch_in(self.entered_badge, datetime.now())
         self.add_badge_to_grid(self.entered_badge)
-        badges = libtt.get_badges()
         self.clear_input()
 
     def punch_out(self, event, badge_num=None):
         global badges
         badge_num = self.entered_badge if badge_num is None else badge_num
         print(f'Punch Out {badge_num}')
-        libtt.punch_out(badge_num, datetime.now())
+        badges = libtt.punch_out(badge_num, datetime.now())
         libtt.tabulate_badge(badge_num)
-        self.remove_badge_from_grid(badge_num)
-        badges = libtt.get_badges()
+        self.update_active_badges()
         self.clear_input()
 
     def check_time_season(self, event):

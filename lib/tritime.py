@@ -4,6 +4,8 @@ from datetime import datetime
 
 
 json_dt_fmt = '%Y-%m-%d %H:%M:%S'
+
+
 def get_badges():
     with open('badges.json', 'r') as f:
         return json.loads(f.read())
@@ -38,6 +40,11 @@ def punch_in(badge: str, dt: datetime):
         'ts_in': datetime.now().strftime(json_dt_fmt)
     })
     write_punches(badge, punch_data)
+    # Change status
+    badges = get_badges()
+    badges[badge]['status'] = 'in'
+    store_badges(badges)
+    return badges
 
 
 def punch_out(badge: str, dt: datetime):
@@ -46,6 +53,10 @@ def punch_out(badge: str, dt: datetime):
     lrec = punch_data[-1]
     lrec['ts_out'] = datetime.now().strftime(json_dt_fmt)
     write_punches(badge, punch_data)
+    badges = get_badges()
+    badges[badge]['status'] = 'out'
+    store_badges(badges)
+    return badges
 
 
 def tabulate_badge(badge: str):
