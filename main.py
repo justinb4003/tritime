@@ -168,8 +168,8 @@ class MainWindow(wx.Frame):
         vbox = wx.BoxSizer(wx.VERTICAL)
         btn = wx.Button(self, label=badge_name)
         btn.Bind(wx.EVT_BUTTON, lambda event: self.punch_out(event, badge_num))
-        vbox.Add(bmp)
-        vbox.Add(btn)
+        vbox.Add(bmp, flag=wx.CENTER)
+        vbox.Add(btn, flag=wx.CENTER)
         active_badges[badge_num] = vbox
         self.active_badge_sizer.Add(vbox)
         self.Layout()
