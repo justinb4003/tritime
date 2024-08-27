@@ -74,13 +74,14 @@ class MainWindow(wx.Frame):
         hbox.Add(wx.SizerItem(20, 20))
         hbox.Add(self.check_time)
         hbox.Add(wx.SizerItem(20, 20))
-        hbox.Add(self.check_time_grid, wx.EXPAND)
-        hbox.Add(wx.SizerItem(20, 20))
         hbox.Add(self.active_badge_sizer, border=10, flag=wx.EXPAND)
 
         vbox.Add(self.badge_num_input, 0, wx.EXPAND)
+        vbox.Add(wx.SizerItem(20, 20))
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
         vbox.Add(hbox, border=5)
+        vbox.Add(wx.SizerItem(20, 20))
+        vbox.Add(self.check_time_grid, wx.EXPAND)
         # Add sizer to panel
         self.SetSizer(vbox)
         self.Layout()
@@ -206,6 +207,7 @@ class MainWindow(wx.Frame):
         print(f'Check Time {self.entered_badge}')
         # Create a grid
         punch_data = libtt.read_punches(self.entered_badge)
+        punch_data.reverse()
         curr_rows = self.check_time_grid.GetNumberRows()
         new_rows = len(punch_data) + 1
         if new_rows > curr_rows:
