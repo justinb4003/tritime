@@ -72,41 +72,39 @@ class MainWindow(wx.Frame):
         # Create a grid that lets us show everybody punched in
         self.active_badge_sizer = wx.GridSizer(4, 20, 10)
 
-        spacer = wx.SizerItem(20, 20)
-
+        spacer_size = 20
         # This lets us put a space to the left of everything by putting our
         # other boxes in a horizontal box witha spacer at the beginning.
         outerhbox = wx.BoxSizer(wx.HORIZONTAL)
-
         hbox_inout = wx.BoxSizer(wx.HORIZONTAL)
         hbox_inout.Add(self.in_btn)
-        hbox_inout.Add(spacer)
+        hbox_inout.AddSpacer(spacer_size)
         hbox_inout.Add(self.out_btn)
-        hbox_inout.Add(spacer)
+        hbox_inout.AddSpacer(spacer_size)
         hbox_inout.Add(self.check_time)
-        hbox_inout.Add(spacer)
+        hbox_inout.AddSpacer(spacer_size)
         hbox_inout.Add(self.active_badge_sizer, flag=wx.EXPAND)
-        hbox_inout.Add(spacer)
+        hbox_inout.AddSpacer(spacer_size)
 
         hbox_usermanage = wx.BoxSizer(wx.HORIZONTAL)
         hbox_usermanage.Add(self.add_user_btn)
-        hbox_usermanage.Add(spacer)
+        hbox_usermanage.AddSpacer(spacer_size)
         hbox_usermanage.Add(self.find_user_btn)
-        hbox_usermanage.Add(spacer)
+        hbox_usermanage.AddSpacer(spacer_size)
 
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(self.badge_num_input)
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_inout)
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_usermanage)
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(self.check_time_grid, wx.EXPAND)
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
 
-        outerhbox.Add(spacer)
+        outerhbox.AddSpacer(spacer_size)
         outerhbox.Add(vbox)
         # Add sizer to panel
         self.SetSizer(outerhbox)
@@ -279,7 +277,6 @@ class MainWindow(wx.Frame):
         # Create a dialog that has inputs for a badge number, display name,
         # and photo URL.  When the dialog is submitted, add the user to the
         # database and update the active badges grid.
-        spacer = wx.SizerItem(20, 20)
         self.add_user_dlg = wx.Dialog(self, title='Add User')
         badge_num_label = wx.StaticText(self.add_user_dlg,
                                         label='Badge Number')
@@ -294,23 +291,24 @@ class MainWindow(wx.Frame):
         submit_btn.Bind(wx.EVT_BUTTON, lambda event: self.submit_user(
             event, badge_num_input, display_name_input, photo_url_input
         ))
+        spacer_size = 20
         vbox = wx.BoxSizer(wx.VERTICAL)
         vbox.Add(badge_num_label)
         vbox.Add(badge_num_input)
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(display_name_label)
         vbox.Add(display_name_input)
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(photo_url_label)
         vbox.Add(photo_url_input)
-        vbox.Add(spacer)
-        vbox.Add(submit_btn)
-        vbox.Add(spacer)
+        vbox.AddSpacer(spacer_size)
+        vbox.AddSpacer(spacer_size)
         self.add_user_dlg.SetSizerAndFit(vbox)
         self.add_user_dlg.Layout()
         self.add_user_dlg.Update()
         self.add_user_dlg.ShowModal()
-        # self.add_user_dlg.Destroy()
+        self.add_user_dlg.Destroy()
+
 
     def submit_user(self, event, badge_num_input, display_name_input,
                     photo_url_input):
