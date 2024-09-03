@@ -51,6 +51,11 @@ class MainWindow(wx.Frame):
         self.check_time = wx.Button(self, label='Check Time')
         self.check_time.Bind(wx.EVT_BUTTON, self.check_time_total)
 
+        self.add_user_btn = wx.Button(self, label='Add User')
+        self.add_user_btn.Bind(wx.EVT_BUTTON, self.add_user)
+        self.find_user_btn = wx.Button(self, label='Search')
+        self.find_user_btn.Bind(wx.EVT_BUTTON, self.find_user)
+
         self.check_time_grid = wxgrid.Grid(self)
         self.check_time_grid.CreateGrid(0, 3)
         # Set the column labels
@@ -73,22 +78,30 @@ class MainWindow(wx.Frame):
         # other boxes in a horizontal box witha spacer at the beginning.
         outerhbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(self.in_btn)
-        hbox.Add(spacer)
-        hbox.Add(self.out_btn)
-        hbox.Add(spacer)
-        hbox.Add(self.check_time)
-        hbox.Add(spacer)
-        hbox.Add(self.active_badge_sizer, flag=wx.EXPAND)
-        hbox.Add(spacer)
+        hbox_inout = wx.BoxSizer(wx.HORIZONTAL)
+        hbox_inout.Add(self.in_btn)
+        hbox_inout.Add(spacer)
+        hbox_inout.Add(self.out_btn)
+        hbox_inout.Add(spacer)
+        hbox_inout.Add(self.check_time)
+        hbox_inout.Add(spacer)
+        hbox_inout.Add(self.active_badge_sizer, flag=wx.EXPAND)
+        hbox_inout.Add(spacer)
+
+        hbox_usermanage = wx.BoxSizer(wx.HORIZONTAL)
+        hbox_usermanage.Add(self.add_user_btn)
+        hbox_usermanage.Add(spacer)
+        hbox_usermanage.Add(self.find_user_btn)
+        hbox_usermanage.Add(spacer)
 
         vbox.Add(spacer)
         vbox.Add(self.badge_num_input)
         vbox.Add(spacer)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
         vbox.Add(spacer)
-        vbox.Add(hbox)
+        vbox.Add(hbox_inout)
+        vbox.Add(spacer)
+        vbox.Add(hbox_usermanage)
         vbox.Add(spacer)
         vbox.Add(self.check_time_grid, wx.EXPAND)
         vbox.Add(spacer)
@@ -260,6 +273,65 @@ class MainWindow(wx.Frame):
         self.check_time_grid.AutoSize()
         self.Layout()
         self.Update()
+
+    def add_user(self, event):
+        print('adding user dialog')
+        # Create a dialog that has inputs for a badge number, display name,
+        # and photo URL.  When the dialog is submitted, add the user to the
+        # database and update the active badges grid.
+        spacer = wx.SizerItem(20, 20)
+        self.add_user_dlg = wx.Dialog(self, title='Add User')
+        badge_num_label = wx.StaticText(self.add_user_dlg,
+                                        label='Badge Number')
+        badge_num_input = wx.TextCtrl(self.add_user_dlg, size=(200, -1))
+        display_name_label = wx.StaticText(self.add_user_dlg,
+                                           label='Display Name')
+        display_name_input = wx.TextCtrl(self.add_user_dlg, size=(200, -1))
+        photo_url_label = wx.StaticText(self.add_user_dlg,
+                                        label='Photo URL')
+        photo_url_input = wx.TextCtrl(self.add_user_dlg, size=(400, -1))
+        submit_btn = wx.Button(self.add_user_dlg, label='Submit')
+        submit_btn.Bind(wx.EVT_BUTTON, lambda event: self.submit_user(
+            event, badge_num_input, display_name_input, photo_url_input
+        ))
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(badge_num_label)
+        vbox.Add(badge_num_input)
+        vbox.Add(spacer)
+        vbox.Add(display_name_label)
+        vbox.Add(display_name_input)
+        vbox.Add(spacer)
+        vbox.Add(photo_url_label)
+        vbox.Add(photo_url_input)
+        vbox.Add(spacer)
+        vbox.Add(submit_btn)
+        vbox.Add(spacer)
+        self.add_user_dlg.SetSizerAndFit(vbox)
+        self.add_user_dlg.Layout()
+        self.add_user_dlg.Update()
+        self.add_user_dlg.ShowModal()
+        # self.add_user_dlg.Destroy()
+
+    def submit_user(self, event, badge_num_input, display_name_input,
+                    photo_url_input):
+        badge_num = badge_num_input.GetValue()
+        display_name = display_name_input.GetValue()
+        photo_url = photo_url_input.GetValue()
+        # if any of the inputs are empty, don't add the user
+        if not all([badge_num, display_name, photo_url]):
+            # TODO: Add a dialog that tells the user to fill in all fields
+            return
+        badges = libtt.get_badges()
+        badges[badge_num] = {
+            'display_name': display_name,
+            'photo_url': photo_url,
+            'status': 'out'
+        }
+        libtt.store_badges(badges)
+        self.add_user_dlg.EndModal(True)
+
+    def find_user(self, event):
+        print('finding user dialog')
 
 
 # here's how we fire up the wxPython app
