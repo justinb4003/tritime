@@ -12,17 +12,36 @@ from datetime import datetime
 
 # If we have a URL (http:// or https://), download the image from the URL
 def download_image(self, url, width=64, height=64):
-    response = requests.get(url)
-    if response.status_code == 200:
-        # Convert the image data into a wx.Bitmap
-        image_data = BytesIO(response.content)
-        image = wx.Image(image_data).Scale(width, height,
-                                           wx.IMAGE_QUALITY_HIGH)
-        valid_image = True
-    else:  # noqa -- doesn't matter the error -- just return a default image
-        print('Using unknown image')
-        image = wx.Image()
+    # This method is a hot mess and needs to be cleaned up.
+    image = wx.Image()
+    print('loading unknown png')
+    image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
+    print('loaded')
+    valid_image = False
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            # Convert the image data into a wx.Bitmap
+            image_data = BytesIO(response.content)
+            print('loading image from HTTP')
+            img_stream = wx.MemoryInputStream(image_data)
+            canread = image.CanRead(img_stream)
+            print(f'Can read: {canread}')
+            image = wx.Image(image_data)
+            if image.IsOk():
+                print('img ok')
+                image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
+                print('scaled')
+                valid_image = True
+            else:
+                print('img not ok')
+                image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
+        else:  # noqa -- doesn't matter the error -- just return a default image
+            print('Using unknown image')
+    except:  # noqa
+        print('exception loading unknown png')
         image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
+        print('exception loaded')
         valid_image = False
     return image, valid_image
 
