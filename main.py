@@ -13,15 +13,13 @@ from datetime import datetime
 # If we have a URL (http:// or https://), download the image from the URL
 def download_image(self, url, width=64, height=64):
     response = requests.get(url)
-    try:
-        response.raise_for_status()  # Ensure the request was successful
-
+    if response.status_code == 200:
         # Convert the image data into a wx.Bitmap
         image_data = BytesIO(response.content)
         image = wx.Image(image_data).Scale(width, height,
                                            wx.IMAGE_QUALITY_HIGH)
         valid_image = True
-    except:  # noqa -- doesn't matter the error -- just return a default image
+    else:  # noqa -- doesn't matter the error -- just return a default image
         print('Using unknown image')
         image = wx.Image()
         image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
@@ -128,8 +126,9 @@ class MainWindow(wx.Frame):
             if badge['status'] == 'in':
                 self.add_badge_to_grid(bnum)
 
-    # Draws an individual badge on the grid with a button to punch them out
-    def add_badge_to_grid(self, badge_num):
+    def create_badge_card(self, badge_num, parent=None, bind_method=None):
+        parent = self if parent is None else parent
+        bind_method = self.punch_out if bind_method is None else bind_method
         badges = libtt.get_badges()
         badge = badges[badge_num]
         badge_name = badge['display_name']
@@ -142,19 +141,24 @@ class MainWindow(wx.Frame):
         # Otherwise we can download the image from the URL
         else:
             img_url = badge['photo_url']
-            img, should_cache = download_image(self, img_url)
+            img, should_cache = download_image(parent, img_url)
             if should_cache:
                 if not os.path.exists('cached_photos'):
                     os.makedirs('cached_photos')
                 img.SaveFile(f'cached_photos/{badge_num}.png',
                              wx.BITMAP_TYPE_PNG)
         img = wx.Bitmap(img)
-        bmp = wx.StaticBitmap(self, -1, img)
+        bmp = wx.StaticBitmap(parent, -1, img)
         vbox = wx.BoxSizer(wx.VERTICAL)
-        btn = wx.Button(self, label=badge_name)
-        btn.Bind(wx.EVT_BUTTON, lambda event: self.punch_out(event, badge_num))
+        btn = wx.Button(parent, label=badge_name)
+        btn.Bind(wx.EVT_BUTTON, lambda event: bind_method(event, badge_num))
         vbox.Add(bmp, flag=wx.CENTER)
         vbox.Add(btn, flag=wx.CENTER)
+        return vbox
+
+    # Draws an individual badge on the grid with a button to punch them out
+    def add_badge_to_grid(self, badge_num):
+        vbox = self.create_badge_card(badge_num)
         self.active_badge_sizer.Add(vbox)
         self.Layout()
         self.Update()
@@ -309,14 +313,13 @@ class MainWindow(wx.Frame):
         self.add_user_dlg.ShowModal()
         self.add_user_dlg.Destroy()
 
-
     def submit_user(self, event, badge_num_input, display_name_input,
                     photo_url_input):
         badge_num = badge_num_input.GetValue()
         display_name = display_name_input.GetValue()
         photo_url = photo_url_input.GetValue()
-        # if any of the inputs are empty, don't add the user
-        if not all([badge_num, display_name, photo_url]):
+        # Don't allow submit unless a name and number are in
+        if not all([badge_num, display_name]):
             # TODO: Add a dialog that tells the user to fill in all fields
             return
         badges = libtt.get_badges()
@@ -328,7 +331,49 @@ class MainWindow(wx.Frame):
         libtt.store_badges(badges)
         self.add_user_dlg.EndModal(True)
 
+    def set_badge_input(self, event, badge_num):
+        self.badge_num_input.SetValue(badge_num)
+        self.badge_num_input.SetFocus()
+        self.find_user_dlg.EndModal(True)
+
+    def find_user_input_change(self, event):
+        search_text = event.GetString().lower()
+        print(search_text)
+        matches = {}
+        self.find_user_badge_sizer.Clear(True)
+        for num, b in self.find_user_badges.items():
+            if search_text in b['display_name'].lower():
+                matches[num] = b
+                vbox = self.create_badge_card(num,
+                                              self.find_user_dlg,
+                                              self.set_badge_input)
+                self.find_user_badge_sizer.Add(vbox)
+        print(matches)
+        self.find_user_dlg.Fit()
+        #self.find_user_dlg.Refresh()
+        self.find_user_dlg.Layout()
+        self.find_user_dlg.Update()
+        pass
+
     def find_user(self, event):
+        self.find_user_badges = libtt.get_badges()
+        self.find_user_dlg = wx.Dialog(self, title='Find User')
+        search_input = wx.TextCtrl(self.find_user_dlg, size=(200, -1))
+        search_input.Bind(wx.EVT_TEXT, self.find_user_input_change)
+        self.find_user_badge_sizer = wx.GridSizer(4, 20, 10)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.AddSpacer(20)
+        vbox.Add(search_input)
+        vbox.AddSpacer(20)
+        vbox.Add(self.find_user_badge_sizer, flag=wx.EXPAND)
+        vbox.AddSpacer(20)
+        self.find_user_dlg.SetSizerAndFit(vbox)
+        self.find_user_dlg.Layout()
+        self.find_user_dlg.Update()
+        self.find_user_dlg.ShowModal()
+        self.find_user_dlg.Destroy()
+        del self.find_user_badges
         print('finding user dialog')
 
 
