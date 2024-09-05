@@ -125,10 +125,23 @@ class MainWindow(wx.Frame):
         outerhbox.Add(vbox)
         # Add sizer to panel
         self.SetSizer(outerhbox)
+        # self.ShowFullScreen(True)
         self.Layout()
         self.Update()
+        self.Bind(wx.EVT_KEY_DOWN, self.on_key)
 
         self.update_active_badges()
+
+    def on_key(self, event):
+        """
+        Check for ESC key press and exit is ESC is pressed
+        """
+        key_code = event.GetKeyCode()
+        print(f'Key Code: {key_code}')
+        if key_code == wx.WXK_ESCAPE:
+            self.GetParent().Close()
+        else:
+            event.Skip()
 
     # Remove all of the active badges from the grid; this was easier than
     # trying to remove the one-by-one.
@@ -185,11 +198,19 @@ class MainWindow(wx.Frame):
     # Reset the badge number input and set the focus back to it
     def clear_input(self):
         self.badge_num_input.SetValue('')
+        self.in_btn.Disable()
+        self.out_btn.Disable()
+        self.check_time.Disable()
+        self.check_time_grid.Hide()
         self.badge_num_input.SetFocus()
 
     # This method fires whenever the badge number input changes; it will
     # update the greeting label and enable/disable the buttons as needed.
     def on_badge_num_change(self, event):
+        self.in_btn.Disable()
+        self.out_btn.Disable()
+        self.check_time.Disable()
+        self.check_time_grid.Hide()
         badge_num = event.GetString()
         badges = libtt.get_badges()
         valid_badges = badges.keys()
@@ -209,10 +230,6 @@ class MainWindow(wx.Frame):
             self.greeting_label.SetLabel(
                 'Scan badge'
             )
-            self.in_btn.Disable()
-            self.out_btn.Disable()
-            self.check_time.Disable()
-            self.check_time_grid.Hide()
 
     # If the 'Enter' key is pressed in the badge input box this method fires
     # We'll use this to punch in or out the badge depending on what the status
@@ -325,6 +342,7 @@ class MainWindow(wx.Frame):
         vbox.Add(photo_url_label)
         vbox.Add(photo_url_input)
         vbox.AddSpacer(spacer_size)
+        vbox.Add(submit_btn)
         vbox.AddSpacer(spacer_size)
         self.add_user_dlg.SetSizerAndFit(vbox)
         self.add_user_dlg.Layout()
