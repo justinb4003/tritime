@@ -369,7 +369,6 @@ class MainWindow(wx.Frame):
                 self.find_user_badge_sizer.Add(vbox)
         print(matches)
         self.find_user_dlg.Fit()
-        #self.find_user_dlg.Refresh()
         self.find_user_dlg.Layout()
         self.find_user_dlg.Update()
         pass
