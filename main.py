@@ -14,30 +14,20 @@ from datetime import datetime
 def download_image(self, url, width=64, height=64):
     # This method is a hot mess and needs to be cleaned up.
     image = wx.Image()
-    print('loading unknown png')
     image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
-    print('loaded')
     valid_image = False
     try:
         response = requests.get(url)
         if response.status_code == 200:
             # Convert the image data into a wx.Bitmap
             image_data = BytesIO(response.content)
-            print('loading image from HTTP')
-            img_stream = wx.MemoryInputStream(image_data)
-            canread = image.CanRead(img_stream)
-            print(f'Can read: {canread}')
             image = wx.Image(image_data)
-            if image.IsOk():
-                print('img ok')
-                image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
-                print('scaled')
-                valid_image = True
-            else:
-                print('img not ok')
-                image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
-        else:  # noqa -- doesn't matter the error -- just return a default image
-            print('Using unknown image')
+            image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
+            valid_image = True
+        else:
+            print('img not ok')
+            image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
+            valid_image = False
     except:  # noqa
         print('exception loading unknown png')
         image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
@@ -61,16 +51,17 @@ class MainWindow(wx.Frame):
         self.greeting_label = wx.StaticText(self, -1, 'Welcome to TriTime')
 
         vbox = wx.BoxSizer(wx.VERTICAL)
-        self.in_btn = wx.Button(self, label='In')
+        btn_size = (100, 100)
+        self.in_btn = wx.Button(self, label='In', size=btn_size)
         self.in_btn.Bind(wx.EVT_BUTTON, self.punch_in)
-        self.out_btn = wx.Button(self, label='Out')
+        self.out_btn = wx.Button(self, label='Out', size=btn_size)
         self.out_btn.Bind(wx.EVT_BUTTON, self.punch_out)
-        self.check_time = wx.Button(self, label='Check Time')
+        self.check_time = wx.Button(self, label='Check Time', size=btn_size)
         self.check_time.Bind(wx.EVT_BUTTON, self.check_time_total)
 
-        self.add_user_btn = wx.Button(self, label='Add User')
+        self.add_user_btn = wx.Button(self, label='Add User', size=btn_size)
         self.add_user_btn.Bind(wx.EVT_BUTTON, self.add_user)
-        self.find_user_btn = wx.Button(self, label='Search')
+        self.find_user_btn = wx.Button(self, label='Search', size=btn_size)
         self.find_user_btn.Bind(wx.EVT_BUTTON, self.find_user)
 
         self.check_time_grid = wxgrid.Grid(self)
@@ -204,6 +195,14 @@ class MainWindow(wx.Frame):
         self.check_time_grid.Hide()
         self.badge_num_input.SetFocus()
 
+    def lookup_alt(self, badges, badge_num):
+        for real_badge_num, badge in badges.items():
+            if 'alt_keys' not in badge:
+                continue
+            if badge_num in badge['alt_keys']:
+                return real_badge_num
+        return badge_num
+
     # This method fires whenever the badge number input changes; it will
     # update the greeting label and enable/disable the buttons as needed.
     def on_badge_num_change(self, event):
@@ -214,6 +213,7 @@ class MainWindow(wx.Frame):
         badge_num = event.GetString()
         badges = libtt.get_badges()
         valid_badges = badges.keys()
+        badge_num = self.lookup_alt(badges, badge_num)
         print(f'Badge Number: {badge_num}')
         if badge_num in valid_badges:
             badge_data = badges[badge_num]
@@ -249,6 +249,7 @@ class MainWindow(wx.Frame):
     # manipulation to the libtt module.
     def punch_in(self, event):
         badge = self.badge_num_input.GetValue()
+        badge = self.lookup_alt(libtt.get_badges(), badge)
         print(f'Punch In {badge}')
         badges = libtt.punch_in(badge, datetime.now())
         libtt.store_badges(badges)
@@ -327,7 +328,8 @@ class MainWindow(wx.Frame):
         photo_url_label = wx.StaticText(self.add_user_dlg,
                                         label='Photo URL')
         photo_url_input = wx.TextCtrl(self.add_user_dlg, size=(400, -1))
-        submit_btn = wx.Button(self.add_user_dlg, label='Submit')
+        submit_btn = wx.Button(self.add_user_dlg, label='Submit',
+                               size=(80, 80))
         submit_btn.Bind(wx.EVT_BUTTON, lambda event: self.submit_user(
             event, badge_num_input, display_name_input, photo_url_input
         ))
