@@ -359,7 +359,12 @@ class MainWindow(wx.Frame):
         photo_url = photo_url_input.GetValue()
         # Don't allow submit unless a name and number are in
         if not all([badge_num, display_name]):
-            # TODO: Add a dialog that tells the user to fill in all fields
+            errmsg = 'Please fill in the badge number and display name fields'
+            wx.MessageBox(errmsg, 'Error', wx.OK | wx.ICON_ERROR)
+            if badge_num == '':
+                badge_num_input.SetFocus()
+            elif display_name == '':
+                display_name_input.SetFocus()
             return
         badges = libtt.get_badges()
         badges[badge_num] = {
