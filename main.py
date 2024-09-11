@@ -51,7 +51,11 @@ class MainWindow(wx.Frame):
         self.badge_num_input.Bind(wx.EVT_TEXT, self.on_badge_num_change)
         self.badge_num_input.Bind(wx.EVT_TEXT_ENTER, self.on_badge_num_enter)
         self.greeting_label = wx.StaticText(self, -1, 'Welcome to TriTime')
-        self.clock_display = wx.StaticText(self, -1, 'HH:mm:ss')
+        self.clock_display = wx.StaticText(self, -1, 'HH:mm:ss AP')
+        tc = wx.Font(28, wx.FONTFAMILY_TELETYPE,
+                     wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+        self.clock_display.SetFont(tc)
+        self.badge_num_input.SetFont(tc)
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         btn_size = (100, 100)
@@ -142,7 +146,7 @@ class MainWindow(wx.Frame):
     def update_clock(self):
         while self.clock_thread_run:
             time.sleep(1)
-            current_time = time.strftime("%H:%M:%S")
+            current_time = time.strftime("%I:%M:%S %p")
             # Use wx.CallAfter to update the StaticText in the main thread
             wx.CallAfter(self.clock_display.SetLabel, current_time)
 
