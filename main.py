@@ -50,6 +50,8 @@ class MainWindow(wx.Frame):
                                            style=wx.TE_PROCESS_ENTER)
         self.badge_num_input.Bind(wx.EVT_TEXT, self.on_badge_num_change)
         self.badge_num_input.Bind(wx.EVT_TEXT_ENTER, self.on_badge_num_enter)
+        self.export_btn = wx.Button(self, label='Export Data')
+        self.export_btn.Bind(wx.EVT_BUTTON, self.export_data)
         self.greeting_label = wx.StaticText(self, -1, 'Welcome to TriTime')
         self.clock_display = wx.StaticText(self, -1, 'HH:mm:ss AP')
         tc = wx.Font(28, wx.FONTFAMILY_TELETYPE,
@@ -107,8 +109,13 @@ class MainWindow(wx.Frame):
         hbox_usermanage.Add(self.find_user_btn)
         hbox_usermanage.AddSpacer(spacer_size)
 
+        hbox_top = wx.BoxSizer(wx.HORIZONTAL)
+        hbox_top.Add(self.clock_display)
+        hbox_top.AddStretchSpacer(20)
+        hbox_top.Add(self.export_btn)
+
         vbox.AddSpacer(spacer_size)
-        vbox.Add(self.clock_display)
+        vbox.Add(hbox_top, 1, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.badge_num_input)
         vbox.AddSpacer(spacer_size)
@@ -143,9 +150,24 @@ class MainWindow(wx.Frame):
         self.clock_thread.join()
         self.Destroy()
 
+    # TODO: This is a stub for exporting data; it will be implemented later
+    def export_data(self, event):
+        badges = libtt.get_badges()
+        for badge_num, badge in badges.items():
+            print(badge_num)
+            punches = libtt.read_punches(badge_num)
+            for punch in punches:
+                is_error = False
+                tsi = punch['ts_in']
+                if 'ts_out' in punch:
+                    tso = punch['ts_out']
+                else:
+                    tso = tsi
+                    is_error = True
+
     def update_clock(self):
         while self.clock_thread_run:
-            time.sleep(1)
+            time.sleep(0.1)
             current_time = time.strftime("%I:%M:%S %p")
             # Use wx.CallAfter to update the StaticText in the main thread
             wx.CallAfter(self.clock_display.SetLabel, current_time)
