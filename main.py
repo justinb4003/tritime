@@ -2,11 +2,13 @@
 # Using flake8 for linting
 import os
 import wx
+import time
 import requests
 import wx.grid as wxgrid
 import lib.tritime as libtt
 
 from io import BytesIO
+from threading import Thread
 from datetime import datetime
 
 
@@ -49,6 +51,7 @@ class MainWindow(wx.Frame):
         self.badge_num_input.Bind(wx.EVT_TEXT, self.on_badge_num_change)
         self.badge_num_input.Bind(wx.EVT_TEXT_ENTER, self.on_badge_num_enter)
         self.greeting_label = wx.StaticText(self, -1, 'Welcome to TriTime')
+        self.clock_display = wx.StaticText(self, -1, 'HH:mm:ss')
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         btn_size = (100, 100)
@@ -101,6 +104,8 @@ class MainWindow(wx.Frame):
         hbox_usermanage.AddSpacer(spacer_size)
 
         vbox.AddSpacer(spacer_size)
+        vbox.Add(self.clock_display)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(self.badge_num_input)
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
@@ -121,7 +126,25 @@ class MainWindow(wx.Frame):
         self.Update()
         self.Bind(wx.EVT_KEY_DOWN, self.on_key)
 
+        self.Bind(wx.EVT_CLOSE, self.on_app_shutdown)
+
+        self.clock_thread_run = True
+        self.clock_thread = Thread(target=self.update_clock)
+        self.clock_thread.start()
+
         self.update_active_badges()
+
+    def on_app_shutdown(self, event):
+        self.clock_thread_run = False
+        self.clock_thread.join()
+        self.Destroy()
+
+    def update_clock(self):
+        while self.clock_thread_run:
+            time.sleep(1)
+            current_time = time.strftime("%H:%M:%S")
+            # Use wx.CallAfter to update the StaticText in the main thread
+            wx.CallAfter(self.clock_display.SetLabel, current_time)
 
     def on_key(self, event):
         """
