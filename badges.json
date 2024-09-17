@@ -1,16 +1,76 @@
 {
+    "1234": {
+        "display_name": "Bob",
+        "photo_url": "https://fakeurl.com/something.png",
+        "status": "out"
+    },
+    "321": {
+        "display_name": "Tester",
+        "photo_url": "no",
+        "status": "out"
+    },
+    "345": {
+        "display_name": "Bob E",
+        "photo_url": "no",
+        "status": "out"
+    },
+    "4567": {
+        "display_name": "Ivan",
+        "photo_url": "nourl",
+        "status": "out"
+    },
+    "8787": {
+        "display_name": "noting",
+        "photo_url": "askdjf",
+        "status": "out"
+    },
+    "895": {
+        "display_name": "Allendale",
+        "photo_url": "http://www.google.com",
+        "status": "out"
+    },
+    "9013": {
+        "display_name": "JC",
+        "photo_url": "",
+        "status": "out"
+    },
+    "chad": {
+        "display_name": "Chad Potinsky",
+        "mentor": true,
+        "parent": false,
+        "photo_url": "https://allendalerobotics.com/wp-content/uploads/2024/02/Chad-Pic-3-scaled-e1714564672763-768x768.jpg",
+        "status": "out",
+        "student": false
+    },
     "david": {
         "display_name": "David Austin",
         "mentor": true,
         "parent": false,
         "photo_url": "https://www.google.com/david",
+        "status": "out",
+        "student": false
+    },
+    "elijah": {
+        "alt_keys": [
+            "mtd"
+        ],
+        "display_name": "Elijah H",
+        "mentor": true,
+        "parent": false,
+        "photo_url": "https://allendalerobotics.com/wp-content/uploads/2024/02/img_9314_720-1.jpg",
+        "status": "out",
         "student": false
     },
     "justin": {
+        "alt_keys": [
+            "jjb",
+            "progmentor"
+        ],
         "display_name": "Justin Buist",
         "mentor": true,
         "parent": false,
-        "photo_url": "https://www.google.com",
+        "photo_url": "https://allendalerobotics.com/wp-content/uploads/2024/02/JUSTIN-MENTOR-768x768.png",
+        "status": "in",
         "student": false
     }
 }
