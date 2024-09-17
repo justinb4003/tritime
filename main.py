@@ -3,9 +3,11 @@
 import os
 import wx
 import time
+import pandas as pd
 import requests
 import wx.grid as wxgrid
 import lib.tritime as libtt
+import lib.trireport as libtr
 
 from io import BytesIO
 from threading import Thread
@@ -152,18 +154,7 @@ class MainWindow(wx.Frame):
 
     # TODO: This is a stub for exporting data; it will be implemented later
     def export_data(self, event):
-        badges = libtt.get_badges()
-        for badge_num, badge in badges.items():
-            print(badge_num)
-            punches = libtt.read_punches(badge_num)
-            for punch in punches:
-                is_error = False
-                tsi = punch['ts_in']
-                if 'ts_out' in punch:
-                    tso = punch['ts_out']
-                else:
-                    tso = tsi
-                    is_error = True
+        libtr.export_to_excel()
 
     def update_clock(self):
         while self.clock_thread_run:
