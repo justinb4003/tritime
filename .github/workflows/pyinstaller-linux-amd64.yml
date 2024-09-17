@@ -19,7 +19,7 @@ jobs:
           python-version: '3.11'  # Specify the Python version you need
 
       - name: Install wx
-        run: pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04/wxPython-4.2.1-cp311-cp311-linux_x86_64.whl
+        run: pip install https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04/wxPython-4.2.1-cp311-cp311-linux_x86_64.whl
 
       - name: Install dependencies
         run: pip install -r requirements.txt
