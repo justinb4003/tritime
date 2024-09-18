@@ -30,12 +30,13 @@ jobs:
       - name: Build Executable
         run: pyinstaller --clean main.spec
 
+      - name: Move in support data files for runtime
+        run: cp unknown_badge.png dist/
+
+
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Executables
-          # Upload everything in dist folder and the unknown_badge.png file
-          path: |
-            dist/**
-            unknown_badge.png
+          name: TriTime_Linux_x64
+          path: dist/**
 
