@@ -34,5 +34,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Executables
-          path: dist/**  # Adjust this path based on where your executable and data files are placed
+          # Upload everything in dist folder and the unknown_badge.png file
+          path: dist/**, unknown_badge.png
 
