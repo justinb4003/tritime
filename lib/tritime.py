@@ -7,7 +7,11 @@ json_dt_fmt = '%Y-%m-%d %H:%M:%S'
 
 
 def get_badges():
-    with open('badges.json', 'r') as f:
+    local_filename = 'badges.json'
+    if not os.path.exists(local_filename):
+        with open(local_filename, 'w') as f:
+            f.write(json.dumps({}))
+    with open(local_filename, 'r') as f:
         return json.loads(f.read())
 
 

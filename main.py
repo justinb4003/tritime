@@ -420,9 +420,7 @@ class MainWindow(wx.Frame):
         self.badge_num_input.SetFocus()
         self.find_user_dlg.EndModal(True)
 
-    def find_user_input_change(self, event):
-        search_text = event.GetString().lower()
-        print(search_text)
+    def update_find_user_search(self, search_text):
         matches = {}
         self.find_user_badge_sizer.Clear(True)
         for num, b in self.find_user_badges.items():
@@ -436,10 +434,17 @@ class MainWindow(wx.Frame):
         self.find_user_dlg.Fit()
         self.find_user_dlg.Layout()
         self.find_user_dlg.Update()
-        pass
+
+    def find_user_input_change(self, event):
+        search_text = event.GetString().lower()
+        print(search_text)
+        self.update_find_user_search(search_text)
 
     def find_user(self, event):
         self.find_user_badges = libtt.get_badges()
+        if len(self.find_user_badges) == 0:
+            wx.MessageBox('There are no users in the system.', 'Error', wx.OK | wx.ICON_ERROR)
+            return
         self.find_user_dlg = wx.Dialog(self, title='Find User')
         search_input = wx.TextCtrl(self.find_user_dlg, size=(200, -1))
         search_input.Bind(wx.EVT_TEXT, self.find_user_input_change)
@@ -451,13 +456,12 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(20)
         vbox.Add(self.find_user_badge_sizer, flag=wx.EXPAND)
         vbox.AddSpacer(20)
+        self.update_find_user_search('')
         self.find_user_dlg.SetSizerAndFit(vbox)
         self.find_user_dlg.Layout()
         self.find_user_dlg.Update()
         self.find_user_dlg.ShowModal()
         self.find_user_dlg.Destroy()
-        del self.find_user_badges
-        print('finding user dialog')
 
 
 # here's how we fire up the wxPython app
