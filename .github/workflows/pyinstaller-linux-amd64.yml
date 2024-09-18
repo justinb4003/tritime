@@ -35,5 +35,7 @@ jobs:
         with:
           name: Executables
           # Upload everything in dist folder and the unknown_badge.png file
-          path: dist/**, unknown_badge.png
+          path: |
+            dist/**
+            unknown_badge.png
 
