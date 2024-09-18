@@ -28,7 +28,7 @@ jobs:
         run: pip install pyinstaller
 
       - name: Build Executable
-        run: pyinstaller --clean your_spec_file.spec
+        run: pyinstaller --clean main.spec
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
