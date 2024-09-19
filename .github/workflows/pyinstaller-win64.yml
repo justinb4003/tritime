@@ -19,6 +19,9 @@ jobs:
       with:
         path: ./
 
+    - name: Move in support data files for runtime
+      run: cp unknown_badge.png dist/windows/
+
     - uses: actions/upload-artifact@v4
       with:
         name: tritime-win64
