@@ -1,4 +1,4 @@
-name: Build Application with PyInstaller
+name: Linux x64 Build
 
 on:
   push:
