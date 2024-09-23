@@ -131,7 +131,7 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
 
         outerhbox.AddSpacer(spacer_size)
-        outerhbox.Add(vbox)
+        outerhbox.Add(vbox, wx.EXPAND)
         # Add sizer to panel
         self.SetSizer(outerhbox)
         # self.ShowFullScreen(True)
@@ -276,6 +276,9 @@ class MainWindow(wx.Frame):
     # of their badge is.
     def on_badge_num_enter(self, event):
         badge_num = event.GetString()
+        if badge_num == 'debug':
+            import wx.lib.inspection
+            wx.lib.inspection.InspectionTool().Show()
         badges = libtt.get_badges()
         valid_badges = badges.keys()
         if badge_num in valid_badges:
