@@ -47,9 +47,9 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, id):
         wx.Frame.__init__(self, parent, id,
                           'TriTime', size=(1024, 800))
+        bni_style = wx.TE_PROCESS_ENTER | wx.TE_MULTILINE
         self.badge_num_input = wx.TextCtrl(self, -1, '',
-                                           size=(300, -1),
-                                           style=wx.TE_PROCESS_ENTER)
+                                           style=bni_style)
         self.badge_num_input.Bind(wx.EVT_TEXT, self.on_badge_num_change)
         self.badge_num_input.Bind(wx.EVT_TEXT_ENTER, self.on_badge_num_enter)
         self.export_btn = wx.Button(self, label='Export Data')
@@ -119,7 +119,7 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_top, 1, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(self.badge_num_input)
+        vbox.Add(self.badge_num_input, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
@@ -132,6 +132,7 @@ class MainWindow(wx.Frame):
 
         outerhbox.AddSpacer(spacer_size)
         outerhbox.Add(vbox, wx.EXPAND)
+        outerhbox.AddSpacer(spacer_size)
         # Add sizer to panel
         self.SetSizer(outerhbox)
         # self.ShowFullScreen(True)
