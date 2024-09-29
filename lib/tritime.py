@@ -1,9 +1,53 @@
 import os
 import json
+import time
+from queue import Queue
+from threading import Thread
 from datetime import datetime
 
+from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 json_dt_fmt = '%Y-%m-%d %H:%M:%S'
+SERVICE_BUS_CONNECTION_STR = 'no'
+TOPIC_NAME = 'trisonics4003'
+
+event_queue: Queue = Queue(maxsize=2048)
+
+
+def send_queue():
+    global event_queue
+    servicebus_client = ServiceBusClient.from_connection_string(SERVICE_BUS_CONNECTION_STR)
+    sender = servicebus_client.get_topic_sender(TOPIC_NAME)
+    while queue_thread_run:
+        # Iterate through event_queue
+        failed_events = []
+        while not event_queue.empty():
+            event = event_queue.get()
+            print(f'event: {event}')
+            # Send event to server
+            print('sending')
+            message = ServiceBusMessage(
+                body="This is the message body",
+                content_type="application/json",
+                subject="Event",
+                application_properties={
+                    "event_type": event['event'],
+                    "ts": event['dt'],
+                    "badge": event['badge']
+                }
+            )
+            sender.send_messages(message)
+            failed_events.append(event)
+        for fe in failed_events:
+            event_queue.put(fe)
+        time.sleep(1)
+
+
+def start_queue_loop():
+    global queue_thread, queue_thread_run
+    queue_thread_run = True
+    queue_thread = Thread(target=send_queue)
+    queue_thread.start()
 
 
 def get_badges():
@@ -38,12 +82,22 @@ def write_punches(badge: str, punch_data: list):
 
 
 def punch_in(badge: str, dt: datetime):
+    global event_queue
+    # TODO: Make entry in queue
     print(f'punch_in: {badge} at {dt}')
+    json_dt = datetime.now().strftime(json_dt_fmt)
+
+    queue_entry = {
+        'badge': badge,
+        'dt': json_dt,
+        'event': 'punch_in'
+    }
+    event_queue.put(queue_entry)
+
     punch_data = read_punches(badge)
-    punch_data.append({
-        'ts_in': datetime.now().strftime(json_dt_fmt)
-    })
+    punch_data.append({'ts_in': json_dt})
     write_punches(badge, punch_data)
+
     # Change status
     badges = get_badges()
     badges[badge]['status'] = 'in'
@@ -52,6 +106,7 @@ def punch_in(badge: str, dt: datetime):
 
 
 def punch_out(badge: str, dt: datetime):
+    # TODO: Make entry in queue
     punch_data = read_punches(badge)
     punch_data = sorted(punch_data, key=lambda x: x['ts_in'])
     lrec = punch_data[-1]
@@ -61,6 +116,17 @@ def punch_out(badge: str, dt: datetime):
     badges[badge]['status'] = 'out'
     store_badges(badges)
     return badges
+
+
+def create_user(badge_num: str, display_name: str, photo_url: str):
+    # TODO: Make entry in queue
+    badges = get_badges()
+    badges[badge_num] = {
+        'display_name': display_name,
+        'photo_url': photo_url,
+        'status': 'out'
+    }
+    store_badges(badges)
 
 
 def tabulate_badge(badge: str):
