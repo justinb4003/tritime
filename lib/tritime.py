@@ -8,7 +8,6 @@ from datetime import datetime
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 json_dt_fmt = '%Y-%m-%d %H:%M:%S'
-SERVICE_BUS_CONNECTION_STR = 'no'
 TOPIC_NAME = 'trisonics4003'
 
 event_queue: Queue = Queue(maxsize=2048)
@@ -16,7 +15,8 @@ event_queue: Queue = Queue(maxsize=2048)
 
 def send_queue():
     global event_queue
-    servicebus_client = ServiceBusClient.from_connection_string(SERVICE_BUS_CONNECTION_STR)
+    conn_str = os.environ.get('TRITIME_MSG_CONN_STR')
+    servicebus_client = ServiceBusClient.from_connection_string(conn_str)
     sender = servicebus_client.get_topic_sender(TOPIC_NAME)
     while queue_thread_run:
         # Iterate through event_queue
@@ -36,7 +36,10 @@ def send_queue():
                     "badge": event['badge']
                 }
             )
-            sender.send_messages(message)
+            try:
+                sender.send_messages(message)
+            except azure.servicebus.exceptions.ServiceBusError as e:
+
             failed_events.append(event)
         for fe in failed_events:
             event_queue.put(fe)

@@ -410,13 +410,7 @@ class MainWindow(wx.Frame):
             elif display_name == '':
                 display_name_input.SetFocus()
             return
-        badges = libtt.get_badges()
-        badges[badge_num] = {
-            'display_name': display_name,
-            'photo_url': photo_url,
-            'status': 'out'
-        }
-        libtt.store_badges(badges)
+        libtt.create_user(badge_num, display_name, photo_url)
         self.add_user_dlg.EndModal(True)
 
     def set_badge_input(self, event, badge_num):
@@ -473,4 +467,5 @@ if __name__ == '__main__':
     app = wx.App()
     frame = MainWindow(parent=None, id=-1)
     frame.Show()
+    libtt.start_queue_loop()
     app.MainLoop()
