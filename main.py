@@ -8,6 +8,7 @@ import requests
 import wx.grid as wxgrid
 import lib.tritime as libtt
 import lib.trireport as libtr
+import lib.trisync as libsync
 
 from io import BytesIO
 from threading import Thread
@@ -151,6 +152,7 @@ class MainWindow(wx.Frame):
     def on_app_shutdown(self, event):
         self.clock_thread_run = False
         self.clock_thread.join()
+        libsync.stop_queue_loop()
         self.Destroy()
 
     # TODO: This is a stub for exporting data; it will be implemented later
@@ -467,5 +469,6 @@ if __name__ == '__main__':
     app = wx.App()
     frame = MainWindow(parent=None, id=-1)
     frame.Show()
-    libtt.start_queue_loop()
+    libsync.load_queue()
+    libsync.start_queue_loop()
     app.MainLoop()
