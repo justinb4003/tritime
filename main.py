@@ -3,16 +3,19 @@
 import os
 import wx
 import time
-import pandas as pd
 import requests
 import wx.grid as wxgrid
 import lib.tritime as libtt
 import lib.trireport as libtr
-import lib.trisync as libsync
 
 from io import BytesIO
 from threading import Thread
 from datetime import datetime
+
+using_azure = False
+sysid = os.environ.get('TRITIME_SYSID', None)
+if sysid is not None:
+    using_azure = True
 
 
 # If we have a URL (http:// or https://), download the image from the URL
@@ -296,8 +299,11 @@ class MainWindow(wx.Frame):
     def punch_in(self, event):
         badge = self.badge_num_input.GetValue()
         badge = self.lookup_alt(libtt.get_badges(), badge)
+        dt = datetime.now()
         print(f'Punch In {badge}')
-        badges = libtt.punch_in(badge, datetime.now())
+        if using_azure:
+            libsync.add_queue_entry(badge, 'punch_in', dt)
+        badges = libtt.punch_in(badge, dt)
         libtt.store_badges(badges)
         self.add_badge_to_grid(badge)
         self.clear_input()
@@ -307,8 +313,11 @@ class MainWindow(wx.Frame):
     def punch_out(self, event, badge_num=None):
         bni = self.badge_num_input
         badge = bni.GetValue() if badge_num is None else badge_num
+        dt = datetime.now()
         print(f'Punch Out {badge}')
-        badges = libtt.punch_out(badge, datetime.now())
+        if using_azure:
+            libsync.add_queue_entry(badge, 'punch_out', dt)
+        badges = libtt.punch_out(badge, dt)
         libtt.store_badges(badges)
         libtt.tabulate_badge(badge)
         self.update_active_badges()
@@ -469,6 +478,8 @@ if __name__ == '__main__':
     app = wx.App()
     frame = MainWindow(parent=None, id=-1)
     frame.Show()
-    libsync.load_queue()
-    libsync.start_queue_loop()
+    if using_azure:
+        import lib.trisync as libsync
+        libsync.load_queue()
+        libsync.start_queue_loop()
     app.MainLoop()

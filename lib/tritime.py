@@ -1,22 +1,16 @@
 import os
 import json
-import time
-import azure
 import hashlib
-from queue import Queue
-from threading import Thread
 from datetime import datetime
 
-from azure.servicebus import ServiceBusClient, ServiceBusMessage
 # Maybe make this conditional ?
 from lib.trisync import add_queue_entry
 
 json_dt_fmt = '%Y-%m-%d %H:%M:%S'
 
 
-def hash_badge_data(badge: str):
-    pd = read_punches(badge)
-    data_str = json.dumps(pd)
+def hash_badge_data(punches: list):
+    data_str = json.dumps(punches)
     hashval = hashlib.sha256(data_str.encode()).hexdigest()
     return hashval
 
@@ -54,7 +48,6 @@ def write_punches(badge: str, punch_data: list):
 
 def punch_in(badge: str, dt: datetime):
     json_dt = dt.strftime(json_dt_fmt)
-    add_queue_entry(badge, 'punch_in', dt)
     punch_data = read_punches(badge)
     punch_data.append({'ts_in': json_dt})
     write_punches(badge, punch_data)
