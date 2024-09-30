@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import azure
 from queue import Queue
 from threading import Thread
 from datetime import datetime
@@ -8,16 +9,29 @@ from datetime import datetime
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 json_dt_fmt = '%Y-%m-%d %H:%M:%S'
-TOPIC_NAME = 'trisonics4003'
-
 event_queue: Queue = Queue(maxsize=2048)
+
+
+def extract_entity_path(connection_string):
+    # Split the connection string into its individual components
+    parts = connection_string.split(';')
+
+    # Parse each part as a key-value pair
+    components = {k: v for k, v in (part.split('=', 1) for part in parts if '=' in part)}
+
+    # Extract the EntityPath if it exists
+    entity_path = components.get("EntityPath")
+
+    return entity_path
 
 
 def send_queue():
     global event_queue
     conn_str = os.environ.get('TRITIME_MSG_CONN_STR')
+    sysid = os.environ.get('TRITIME_SYSID')
+    topic_name = extract_entity_path(conn_str)
     servicebus_client = ServiceBusClient.from_connection_string(conn_str)
-    sender = servicebus_client.get_topic_sender(TOPIC_NAME)
+    sender = servicebus_client.get_topic_sender(topic_name)
     while queue_thread_run:
         # Iterate through event_queue
         failed_events = []
@@ -31,6 +45,7 @@ def send_queue():
                 content_type="application/json",
                 subject="Event",
                 application_properties={
+                    "sysid": sysid,
                     "event_type": event['event'],
                     "ts": event['dt'],
                     "badge": event['badge']
@@ -38,9 +53,8 @@ def send_queue():
             )
             try:
                 sender.send_messages(message)
-            except azure.servicebus.exceptions.ServiceBusError as e:
-
-            failed_events.append(event)
+            except azure.servicebus.exceptions.ServiceBusError:  # noqa
+                failed_events.append(event)
         for fe in failed_events:
             event_queue.put(fe)
         time.sleep(1)
