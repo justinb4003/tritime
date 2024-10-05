@@ -13,7 +13,7 @@ from threading import Thread
 from datetime import datetime
 
 using_azure = False
-sysid = os.environ.get('TRITIME_SYSID', None)
+sysid = os.environ.get('TRITIME_SYS_ID', None)
 if sysid is not None:
     using_azure = True
 
@@ -316,6 +316,7 @@ class MainWindow(wx.Frame):
         dt = datetime.now()
         print(f'Punch Out {badge}')
         if using_azure:
+            import lib.trisync as libsync
             libsync.add_queue_entry(badge, 'punch_out', dt)
         badges = libtt.punch_out(badge, dt)
         libtt.store_badges(badges)
