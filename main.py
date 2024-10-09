@@ -13,8 +13,8 @@ from threading import Thread
 from datetime import datetime
 
 using_azure = False
-sysid = os.environ.get('TRITIME_SYS_ID', None)
-if sysid is not None:
+sys_id = os.environ.get('TRITIME_SYS_ID', None)
+if sys_id is not None:
     using_azure = True
 
 
@@ -45,9 +45,9 @@ def download_image(self, url, width=64, height=64):
 
 
 class MainWindow(wx.Frame):
-
     # Set up the main window for the application; this is where most controls
     # get laid out.
+
     def __init__(self, parent, id):
         wx.Frame.__init__(self, parent, id,
                           'TriTime', size=(1024, 800))
@@ -155,7 +155,9 @@ class MainWindow(wx.Frame):
     def on_app_shutdown(self, event):
         self.clock_thread_run = False
         self.clock_thread.join()
-        libsync.stop_queue_loop()
+        if using_azure:
+            import lib.trisync as libsync
+            libsync.stop_queue_loop()
         self.Destroy()
 
     # TODO: This is a stub for exporting data; it will be implemented later
