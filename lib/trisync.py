@@ -3,6 +3,7 @@ import json
 import queue
 import time
 import azure
+import hashlib
 import requests
 from queue import Queue
 from threading import Thread
@@ -102,8 +103,30 @@ def process_queue():
                         print(f'Sending backfill data for {badge}')
                         bf = read_local_punches(badge)
                         bfjson = json.dumps(bf, indent=4, sort_keys=True)
-                        url = f'http://localhost:7071/api/backfill?badge={badge}&sys_id={sys_id}&machine_id={machine_id}'
+                        base_url = os.environ.get('TRITIME_API_URL')
+                        url = f'{base_url}/backfill?badge={badge}&sys_id={sys_id}&machine_id={machine_id}'
                         requests.post(url, data=bfjson)
+                        recv.complete_message(msg)
+                    elif msg_event_type == 'checksum_publish':
+                        checksum = props['checksum']
+                        print(f'badge: {badge}, checksum: {checksum}')
+                        bf = read_local_punches(badge)
+                        js = json.dumps(bf)
+                        local_checksum = hashlib.sha256(
+                            js.encode('utf-8')
+                        ).hexdigest()
+                        if checksum == local_checksum:
+                            print('checksums match')
+                        else:
+                            print('checksums DO NOT match')
+                            # TODO: Pull from API and store locally
+                            base_url = os.environ.get('TRITIME_API_URL')
+                            url = f'{base_url}/sendbackfill?badge={badge}&sys_id={sys_id}'
+                            resp = requests.get(url)
+                            data = resp.json()
+                            with open(f'punch_data_{badge}.json', 'w') as f:
+                                f.write(json.dumps(data, indent=4,
+                                                   sort_keys=True))
                         recv.complete_message(msg)
                         pass
                 else:
