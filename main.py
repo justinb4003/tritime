@@ -146,6 +146,7 @@ class MainWindow(wx.Frame):
         self.clock_thread.start()
 
         self.update_active_badges()
+        self.badge_num_input.SetFocus()
 
     def on_app_shutdown(self, event):
         self.clock_thread_run = False
