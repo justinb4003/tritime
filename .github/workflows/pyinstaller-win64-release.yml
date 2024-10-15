@@ -1,0 +1,28 @@
+name: Windows x64 Release Build
+
+on:
+  push:
+    branches: [ release ]
+  pull_request:
+    branches: [ release ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Package Application
+      uses: JackMcKew/pyinstaller-action-windows@main
+      with:
+        path: ./
+
+    - name: Move in support data files for runtime
+      run: cp unknown_badge.png dist/windows/
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: tritime-win64
+        path: ./dist/windows
