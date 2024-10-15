@@ -12,11 +12,6 @@ from io import BytesIO
 from threading import Thread
 from datetime import datetime
 
-using_azure = False
-sys_id = os.environ.get('TRITIME_SYS_ID', None)
-if sys_id is not None:
-    using_azure = True
-
 
 # If we have a URL (http:// or https://), download the image from the URL
 def download_image(self, url, width=64, height=64):
@@ -155,9 +150,6 @@ class MainWindow(wx.Frame):
     def on_app_shutdown(self, event):
         self.clock_thread_run = False
         self.clock_thread.join()
-        if using_azure:
-            import lib.trisync as libsync
-            libsync.stop_queue_loop()
         self.Destroy()
 
     # TODO: This is a stub for exporting data; it will be implemented later
@@ -303,8 +295,6 @@ class MainWindow(wx.Frame):
         badge = self.lookup_alt(libtt.get_badges(), badge)
         dt = datetime.now()
         print(f'Punch In {badge}')
-        if using_azure:
-            libsync.add_queue_entry(badge, 'punch_in', dt)
         badges = libtt.punch_in(badge, dt)
         libtt.store_badges(badges)
         self.add_badge_to_grid(badge)
@@ -317,9 +307,6 @@ class MainWindow(wx.Frame):
         badge = bni.GetValue() if badge_num is None else badge_num
         dt = datetime.now()
         print(f'Punch Out {badge}')
-        if using_azure:
-            import lib.trisync as libsync
-            libsync.add_queue_entry(badge, 'punch_out', dt)
         badges = libtt.punch_out(badge, dt)
         libtt.store_badges(badges)
         libtt.tabulate_badge(badge)
@@ -481,8 +468,4 @@ if __name__ == '__main__':
     app = wx.App()
     frame = MainWindow(parent=None, id=-1)
     frame.Show()
-    if using_azure:
-        import lib.trisync as libsync
-        libsync.load_queue()
-        libsync.start_queue_loop()
     app.MainLoop()
