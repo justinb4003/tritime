@@ -14,7 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-
     - name: Get the latest tag
       id: get_tag
       run: |
