@@ -1,4 +1,4 @@
-name: Windows x64 Build
+name: Windows x64 Release Build
 
 on:
   push:
@@ -10,33 +10,9 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      repository-projects: write
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    - name: Get the latest tag
-      id: get_tag
-      run: |
-        latest_tag=$(git describe --tags --abbrev=0)
-        echo "Latest tag: $latest_tag"
-        # Extract version number (assuming tags follow semantic versioning)
-        if [ -z "$latest_tag" ]; then
-          echo "::set-output name=new_tag::v1.0.0"
-        else
-          major=$(echo $latest_tag | cut -d. -f1 | sed 's/v//')
-          minor=$(echo $latest_tag | cut -d. -f2)
-          patch=$(echo $latest_tag | cut -d. -f3)
-          new_patch=$((patch + 1))
-          new_tag="v$major.$minor.$new_patch"
-          echo "::set-output name=new_tag::$new_tag"
-        fi
-      shell: bash
 
     - name: Package Application
       uses: JackMcKew/pyinstaller-action-windows@main
@@ -50,27 +26,3 @@ jobs:
       with:
         name: tritime-win64
         path: ./dist/windows
-
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.get_tag.outputs.new_tag }}
-        release_name: Tritime ${{ steps.get_tag.outputs.new_tag }}
-        draft: false
-        prerelease: false
-
-    - name: Zip the application
-      run: zip -r ./dist/windows/tritime-win64.zip ./dist/windows/*
-
-    - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/windows/tritime-win64.zip
-        asset_name: tritime-win64.zip
-        asset_content_type: application/zip
