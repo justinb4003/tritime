@@ -1,4 +1,4 @@
-name: Linux x64 Release Build
+name: Linux amd64 Release Build
 
 on:
   push:

@@ -2,7 +2,7 @@ name: Create Release with Windows and Linux Artifacts
 
 on:
   workflow_run:
-    workflows: ["Windows x64 Release Build", "Linux x64 Release Build"]
+    workflows: ["Windows x64 Release Build", "Linux amd64 Release Build"]
     types:
       - completed
 

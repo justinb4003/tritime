@@ -1,4 +1,4 @@
-name: Linux x64 Build
+name: Linux amd64 Build
 
 on:
   push:
@@ -36,6 +36,6 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: TriTime_Linux_x64
+          name: tritime-linux-amd64
           path: dist/**
 
