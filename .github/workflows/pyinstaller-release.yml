@@ -39,13 +39,13 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: tritime-win64
-        path: ./dist/
+        path: ./
 
     - name: Download Linux artifact
       uses: actions/download-artifact@v3
       with:
         name: tritime-linux-amd64
-        path: ./dist/
+        path: ./
 
     - name: Create GitHub Release
       id: create_release
