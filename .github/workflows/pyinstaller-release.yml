@@ -45,7 +45,12 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ./
-        key: linux-amd64-app-build-${{ github.sha }}
+ *      key: linux-amd64-app-build-${{ github.sha }}
+
+    - name: Verify Restored Binaries
+       run: |
+        echo "Listing files in ./dist/windows:"
+        ls -l ./
 
     - name: Create GitHub Release
       id: create_release
