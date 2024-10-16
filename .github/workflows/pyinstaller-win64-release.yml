@@ -26,3 +26,9 @@ jobs:
       with:
         name: tritime-win64
         path: ./dist/windows
+
+    - name: Cache Build Output
+      uses: actions/cache@v3
+      with:
+        path: ./dist/windows
+        key: windows-app-build-${{ github.sha }}
