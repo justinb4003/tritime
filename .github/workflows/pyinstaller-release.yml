@@ -35,21 +35,17 @@ jobs:
         fi
       shell: bash
 
-#    - name: Download Windows artifact
-#      uses: actions/download-artifact@v3
-#      with:
-#        name: tritime-win64
-    - name: Restore Build Output from Cache
+    - name: Restore Windows x64 From Cache
       uses: actions/cache@v3
       with:
         path: ./
         key: windows-app-build-${{ github.sha }}
 
-
-    - name: Download Linux artifact
-      uses: actions/download-artifact@v3
+    - name: Restore Linux amd64 From Cache
+      uses: actions/cache@v3
       with:
-        name: tritime-linux-amd64
+        path: ./
+        key: linux-amd64-app-build-${{ github.sha }}
 
     - name: Create GitHub Release
       id: create_release
@@ -68,7 +64,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/tritime-win64
+        asset_path: ./
         asset_name: tritime-win64.zip
         asset_content_type: application/zip
 
@@ -78,6 +74,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/tritime-linux64
+        asset_path: ./
         asset_name: tritime-linux-amd64.tar.gz
         asset_content_type: application/tgz
