@@ -42,6 +42,6 @@ jobs:
       - name: Cache Build Output
         uses: actions/cache@v3
         with:
-          path: ./dist/windows
+          path: ./dist/**
           key: linux-amd64-app-build-${{ github.sha }}
 
