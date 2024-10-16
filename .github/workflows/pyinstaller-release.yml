@@ -38,13 +38,13 @@ jobs:
     - name: Download Windows artifact
       uses: actions/download-artifact@v3
       with:
-        name: tritime-win64.zip
+        name: tritime-win64
         path: ./dist/
 
     - name: Download Linux artifact
       uses: actions/download-artifact@v3
       with:
-        name: tritime-linux-amd64.zip
+        name: tritime-linux-amd64
         path: ./dist/
 
     - name: Create GitHub Release
@@ -64,7 +64,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/tritime-win64.zip
+        asset_path: ./dist/tritime-win64
         asset_name: tritime-win64.zip
         asset_content_type: application/zip
 
@@ -74,6 +74,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/tritime-linux64.zip
-        asset_name: tritime-linux-amd64.zip
-        asset_content_type: application/zip
+        asset_path: ./dist/tritime-linux64
+        asset_name: tritime-linux-amd64.tar.gz
+        asset_content_type: application/tgz
