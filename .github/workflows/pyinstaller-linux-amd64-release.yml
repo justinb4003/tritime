@@ -1,0 +1,48 @@
+name: Linux amd64 Release Build
+
+on:
+  push:
+    branches:
+      - release  # Trigger the workflow on push events to the main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # You can specify other OS like windows-latest if needed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'  # Specify the Python version you need
+
+      - name: Install wx
+        run: pip install https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04/wxPython-4.2.1-cp311-cp311-linux_x86_64.whl
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build Executable
+        run: pyinstaller --clean main.spec
+
+      - name: Move in support data files for runtime
+        run: cp unknown_badge.png dist/
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tritime-linux-amd64
+          path: dist/**
+
+      - name: Cache Build Output
+        uses: actions/cache@v3
+        with:
+          path: ./dist/
+          key: linux-amd64-app-build-${{ github.ref_name }}-${{ github.sha }}
+          enableCrossOsArchive: true
+
