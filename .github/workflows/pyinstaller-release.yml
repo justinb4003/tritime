@@ -8,6 +8,8 @@ on:
 
 jobs:
   release:
+    env:
+      GH_TOKEN: ${{ github.token }}
     runs-on: ubuntu-latest  # You can specify other OS like windows-latest if needed
     steps:
       # Step 1: Poll for Cache Availability      - name: Wait for Caches to Appear
