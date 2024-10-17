@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Using flake8 for linting
 import os
 import wx
 import time
