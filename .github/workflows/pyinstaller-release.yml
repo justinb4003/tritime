@@ -1,9 +1,6 @@
 name: Create Release
 
 on:
-  push:
-    branches:
-      - release  # Trigger the workflow on push events to the main branch
   workflow_run:
     workflows: ["Windows x64 Release Build", "Linux amd64 Release Build"]
     types:
@@ -11,7 +8,7 @@ on:
 
 jobs:
   release:
-
+    if: github.ref_name == 'release'
     runs-on: ubuntu-latest
 
     steps:
