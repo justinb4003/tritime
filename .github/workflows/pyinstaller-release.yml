@@ -1,6 +1,9 @@
 name: Create Release
 
 on:
+  push:
+    branches:
+      - release  # Trigger the workflow on push events to the main branch
   workflow_run:
     workflows: ["Windows x64 Release Build", "Linux amd64 Release Build"]
     types:
@@ -41,6 +44,7 @@ jobs:
         path: ./windows
         key: windows-app-build-${{ github.sha }}
         enableCrossOsArchive: true
+        fail-on-cache-miss: true
 
     - name: Restore Linux amd64 From Cache
       uses: actions/cache@v3
@@ -48,6 +52,7 @@ jobs:
         path: ./linux
         key: linux-amd64-app-build-${{ github.sha }}
         enableCrossOsArchive: true
+        fail-on-cache-miss: true
 
     - name: Verify Restored Binaries
       run: |

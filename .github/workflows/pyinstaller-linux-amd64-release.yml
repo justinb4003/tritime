@@ -44,4 +44,5 @@ jobs:
         with:
           path: ./dist/
           key: linux-amd64-app-build-${{ github.sha }}
+          enableCrossOsArchive: true
 
