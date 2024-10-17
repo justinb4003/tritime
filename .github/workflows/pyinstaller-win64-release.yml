@@ -32,3 +32,4 @@ jobs:
       with:
         path: ./dist/windows
         key: windows-app-build-${{ github.sha }}
+        enableCrossOsArchive: true
