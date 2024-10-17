@@ -12,38 +12,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     runs-on: ubuntu-latest  # You can specify other OS like windows-latest if needed
     steps:
-      # Step 1: Poll for Cache Availability      - name: Wait for Caches to Appear
-      - name: Wait for Caches to Appear
-        id: wait-for-cache
-        run: |
-          max_attempts=10  # Maximum number of attempts
-          attempt=1
-          success=false
-
-          while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt: Checking for both caches..."
-
-            # Check for both caches
-            windows_cache=$(gh cache list --json key --jq ".[] | select(.key == \"windows-build-release-${GITHUB_SHA}\")")
-            linux_cache=$(gh cache list --json key --jq ".[] | select(.key == \"linux-build-release-${GITHUB_SHA}\")")
-
-            if [ -n "$windows_cache" ] && [ -n "$linux_cache" ]; then
-              echo "Both caches found! Proceeding with build."
-              success=true
-              break
-            else
-              echo "One or both caches not found. Retrying in 30 seconds..."
-              sleep 30
-            fi
-
-            attempt=$(( attempt + 1 ))
-          done
-
-          if [ "$success" = false ]; then
-            echo "Caches not available after $max_attempts attempts. Exiting..."
-            exit 1
-          fi
-
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -66,6 +34,38 @@ jobs:
             echo "::set-output name=new_tag::$new_tag"
           fi
         shell: bash
+
+      - name: Wait for Caches to Appear
+        id: wait-for-cache
+        run: |
+          max_attempts=20  # Maximum number of attempts
+          attempt=1
+          success=false
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt: Checking for both caches..."
+
+            # Check for both caches
+            windows_cache=$(gh cache list --json key --jq ".[] | select(.key == \"windows-app-build-${{ github.ref_name }}-${{ github.sha }}\")")
+            linux_cache=$(gh cache list --json key --jq ".[] | select(.key == \"linux-amd64-app-build-${{ github.ref_name }}-${{ github.sha }}\")")
+
+            if [ -n "$windows_cache" ] && [ -n "$linux_cache" ]; then
+              echo "Both caches found! Proceeding with build."
+              success=true
+              break
+            else
+              echo "One or both caches not found. Retrying in 30 seconds..."
+              sleep 30
+            fi
+
+            attempt=$(( attempt + 1 ))
+          done
+
+          if [ "$success" = false ]; then
+            echo "Caches not available after $max_attempts attempts. Exiting..."
+            exit 1
+          fi
+
 
       - name: Restore Windows x64 From Cache
         uses: actions/cache@v3
