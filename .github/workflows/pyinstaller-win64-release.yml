@@ -31,5 +31,5 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ./dist/windows
-        key: windows-app-build-${{ github.sha }}
+        key: windows-app-build-${{ github.ref_name }}-${{ github.sha }}
         enableCrossOsArchive: true

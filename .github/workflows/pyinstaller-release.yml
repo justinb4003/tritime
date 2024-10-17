@@ -42,7 +42,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ./windows
-        key: windows-app-build-${{ github.sha }}
+        key: windows-app-build-${{ github.ref_name }}-${{ github.sha }}
         enableCrossOsArchive: true
         fail-on-cache-miss: true
 
@@ -50,7 +50,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ./linux
-        key: linux-amd64-app-build-${{ github.sha }}
+        key: linux-amd64-app-build-${{ github.ref_name }}-${{ github.sha }}
         enableCrossOsArchive: true
         fail-on-cache-miss: true
 
