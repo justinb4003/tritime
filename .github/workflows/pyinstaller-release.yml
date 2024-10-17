@@ -38,19 +38,22 @@ jobs:
     - name: Restore Windows x64 From Cache
       uses: actions/cache@v3
       with:
-        path: ./
+        path: ./windows
         key: windows-app-build-${{ github.sha }}
+        enableCrossOsArchive: true
 
     - name: Restore Linux amd64 From Cache
       uses: actions/cache@v3
       with:
-        path: ./
+        path: ./linux
         key: linux-amd64-app-build-${{ github.sha }}
+        enableCrossOsArchive: true
 
     - name: Verify Restored Binaries
       run: |
-        echo "Listing files in ./dist/windows:"
-        ls -l ./
+        echo "Listing files in ./windows and ./linux:"
+        ls -l ./windows
+        ls -l ./linux
 
     - name: Create GitHub Release
       id: create_release
