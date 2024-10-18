@@ -73,7 +73,7 @@ jobs:
           path: ./dist/windows/
           key: windows-app-build-${{ github.ref_name }}-${{ github.sha }}
           enableCrossOsArchive: true
-          fail-on-cache-miss: true
+          fail-on-cache-miss: false
 
       - name: Restore Linux amd64 From Cache
         uses: actions/cache@v3
@@ -81,7 +81,7 @@ jobs:
           path: ./dist/
           key: linux-amd64-app-build-${{ github.ref_name }}-${{ github.sha }}
           enableCrossOsArchive: true
-          fail-on-cache-miss: true
+          fail-on-cache-miss: false
 
       - name: Verify Restored Binaries
         run: |
