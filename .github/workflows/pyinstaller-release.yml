@@ -115,7 +115,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./
+          asset_path: ./tritime-win64.zip
           asset_name: tritime-win64.zip
           asset_content_type: application/zip
 
@@ -125,6 +125,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./
+          asset_path: ./tritime-linux-amd64.tar.gz
           asset_name: tritime-linux-amd64.tar.gz
           asset_content_type: application/tgz
