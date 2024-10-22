@@ -90,6 +90,14 @@ jobs:
           ls -l ./dist
           ls -l ./dist/windows/
 
+      - name: Create Windows ZIP archive
+        run: |
+          zip -r ./tritime-win64.zip ./dist/windows/
+
+      - name: Create Linxu amd64 archive
+        run: |
+          tar -czvf ./tritime-linux-amd64.tar.gz ./dist/
+
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -107,7 +115,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/windows/
+          asset_path: ./
           asset_name: tritime-win64.zip
           asset_content_type: application/zip
 
@@ -117,6 +125,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/
+          asset_path: ./
           asset_name: tritime-linux-amd64.tar.gz
           asset_content_type: application/tgz
