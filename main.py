@@ -137,7 +137,6 @@ class MainWindow(wx.Frame):
         # self.ShowFullScreen(True)
         self.Layout()
         self.Update()
-        self.Bind(wx.EVT_KEY_DOWN, self.on_key)
 
         self.Bind(wx.EVT_CLOSE, self.on_app_shutdown)
 
@@ -163,17 +162,6 @@ class MainWindow(wx.Frame):
             current_time = time.strftime("%I:%M:%S %p")
             # Use wx.CallAfter to update the StaticText in the main thread
             wx.CallAfter(self.clock_display.SetLabel, current_time)
-
-    def on_key(self, event):
-        """
-        Check for ESC key press and exit is ESC is pressed
-        """
-        key_code = event.GetKeyCode()
-        print(f'Key Code: {key_code}')
-        if key_code == wx.WXK_ESCAPE:
-            self.GetParent().Close()
-        else:
-            event.Skip()
 
     # Remove all of the active badges from the grid; this was easier than
     # trying to remove the one-by-one.
