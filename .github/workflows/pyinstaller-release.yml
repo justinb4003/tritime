@@ -92,7 +92,7 @@ jobs:
 
       - name: Create Windows ZIP archive
         run: |
-          zip -r ./tritime-win64.zip ./dist/windows/
+          zip -jr ./tritime-win64.zip ./dist/windows/
 
       - name: Create Linxu amd64 archive
         run: |
