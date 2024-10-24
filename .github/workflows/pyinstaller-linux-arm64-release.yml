@@ -47,6 +47,6 @@ jobs:
       - name: Cache Build Output
         uses: actions/cache@v3
         with:
-          path: ./dist/
+          path: ./dist/linux_arm64/
           key: linux-arm64-app-build-${{ github.ref_name }}-${{ github.sha }}
           enableCrossOsArchive: true
