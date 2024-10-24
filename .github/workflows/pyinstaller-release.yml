@@ -38,7 +38,7 @@ jobs:
       - name: Wait for Caches to Appear
         id: wait-for-cache
         run: |
-          max_attempts=20  # Maximum number of attempts
+          max_attempts=40  # Maximum number of attempts
           attempt=1
           success=false
 
