@@ -77,9 +77,9 @@ class MainWindow(wx.Frame):
         self.check_time_grid = wxgrid.Grid(self)
         self.check_time_grid.CreateGrid(0, 3)
         # Set the column labels
-        self.check_time_grid.SetColLabelValue(0, "Time In")
-        self.check_time_grid.SetColLabelValue(1, "Time Out")
-        self.check_time_grid.SetColLabelValue(2, "Hours")
+        self.check_time_grid.SetColLabelValue(0, 'Time In')
+        self.check_time_grid.SetColLabelValue(1, 'Time Out')
+        self.check_time_grid.SetColLabelValue(2, 'Hours')
         self.check_time_grid.HideRowLabels()
 
         # Disable all of the buttons; they will enable when a valid badge is
@@ -152,7 +152,6 @@ class MainWindow(wx.Frame):
         self.clock_thread.join()
         self.Destroy()
 
-    # TODO: This is a stub for exporting data; it will be implemented later
     def export_data(self, event):
         libtr.export_to_excel()
 
@@ -224,6 +223,8 @@ class MainWindow(wx.Frame):
         self.check_time_grid.Hide()
         self.badge_num_input.SetFocus()
 
+    # Users can be identified by more than one code; this method will look up
+    # the "real" badge number if an alternate is entered.
     def lookup_alt(self, badges, badge_num):
         for real_badge_num, badge in badges.items():
             if 'alt_keys' not in badge:
@@ -431,7 +432,8 @@ class MainWindow(wx.Frame):
     def find_user(self, event):
         self.find_user_badges = libtt.get_badges()
         if len(self.find_user_badges) == 0:
-            wx.MessageBox('There are no users in the system.', 'Error', wx.OK | wx.ICON_ERROR)
+            wx.MessageBox('There are no users in the system.',
+                          'Error', wx.OK | wx.ICON_ERROR)
             return
         self.find_user_dlg = wx.Dialog(self, title='Find User')
         search_input = wx.TextCtrl(self.find_user_dlg, size=(200, -1))
