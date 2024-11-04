@@ -39,40 +39,6 @@ def download_image(self, url, width=64, height=64):
     return image, valid_image
 
 
-class ExportDialog(wx.Frame):
-    def __init__(self):
-        super().__init__(None, title="Export Data", size=(300, 200))
-        panel = wx.Panel(self)
-        export_button = wx.Button(panel, label="Export Data", pos=(50, 50))
-        export_button.Bind(wx.EVT_BUTTON, self.on_export)
-
-    def on_export(self, event):
-        # Configure file dialog options
-        wildcard = (
-            "Excel files (*.xlsx)|*.xlsx|"
-            "CSV files (*.csv)|*.csv|"
-            "Parquet files (*.parquet)|*.parquet"
-        )
-
-        # Default directory and filename for export
-        dialog = wx.FileDialog(
-            self, message="Export data",
-            defaultDir="",
-            defaultFile="export.xlsx",
-            wildcard=wildcard,
-            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
-        )
-
-        # Show the dialog and get user input
-        if dialog.ShowModal() == wx.ID_OK:
-            # Get the chosen filename and path
-            filepath = dialog.GetPath()
-            wx.MessageBox(f"File chosen: {filepath}", "Export Complete")
-
-        dialog.Destroy()
-
-
-
 class MainWindow(wx.Frame):
     # Set up the main window for the application; this is where most controls
     # get laid out.
@@ -187,15 +153,6 @@ class MainWindow(wx.Frame):
         self.Destroy()
 
     def export_data(self, event):
-        # TODO: File dialog prompt to choose location
-        class ExportDialog(wx.Frame):
-    def __init__(self):
-        super().__init__(None, title="Export Data", size=(300, 200))
-        panel = wx.Panel(self)
-        export_button = wx.Button(panel, label="Export Data", pos=(50, 50))
-        export_button.Bind(wx.EVT_BUTTON, self.on_export)
-
-    def on_export(self, event):
         # Configure file dialog options
         wildcard = (
             "Excel files (*.xlsx)|*.xlsx|"
@@ -217,10 +174,8 @@ class MainWindow(wx.Frame):
             # Get the chosen filename and path
             filepath = dialog.GetPath()
             wx.MessageBox(f"File chosen: {filepath}", "Export Complete")
-
         dialog.Destroy()
-
-        libtr.export_to_excel()
+        libtr.export_to_excel(filepath)
 
     def update_clock(self):
         while self.clock_thread_run:
