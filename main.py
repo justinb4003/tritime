@@ -2,6 +2,7 @@
 
 import os
 import wx
+import json
 import time
 import requests
 import wx.grid as wxgrid
@@ -11,6 +12,50 @@ import lib.trireport as libtr
 from io import BytesIO
 from threading import Thread
 from datetime import datetime
+
+
+_app_settings: dict[str, any] = {}
+
+
+def default_app_settings() -> dict[str, any]:
+    return {
+        'allow_all_out': True,
+        'show_active_badges': True,
+        'auto_out_time': '20:30',
+        'pay_period_days': 14,
+    }
+
+
+def modifies_settings(func):
+    def wrapper(*args, **kwargs):
+        func(*args, **kwargs)
+        store_app_settings()
+    return wrapper
+
+
+def get_app_settings():
+    try:
+        with open('app_settings.json', 'r') as f:
+            obj = json.loads(f.read())
+    except json.decoder.JSONDecodeError:
+        obj = None
+    except FileNotFoundError:
+        obj = None
+    return obj
+
+
+def store_app_settings():
+    json_str = json.dumps(_app_settings)
+    with open('app_settings.json', 'w') as f:
+        f.write(json_str)
+
+
+def is_json(myjson):
+    try:
+        json.loads(myjson)
+    except ValueError:
+        return False
+    return True
 
 
 # If we have a URL (http:// or https://), download the image from the URL
@@ -73,6 +118,9 @@ class MainWindow(wx.Frame):
         self.add_user_btn.Bind(wx.EVT_BUTTON, self.add_user)
         self.find_user_btn = wx.Button(self, label='Search', size=btn_size)
         self.find_user_btn.Bind(wx.EVT_BUTTON, self.find_user)
+        self.punch_all_out_btn = wx.Button(self, label='Punch All Out!',
+                                           size=btn_size)
+        self.punch_all_out_btn.Bind(wx.EVT_BUTTON, self.punch_all_out)
 
         self.check_time_grid = wxgrid.Grid(self)
         self.check_time_grid.CreateGrid(0, 3)
@@ -108,6 +156,8 @@ class MainWindow(wx.Frame):
         hbox_usermanage.Add(self.add_user_btn)
         hbox_usermanage.AddSpacer(spacer_size)
         hbox_usermanage.Add(self.find_user_btn)
+        hbox_usermanage.AddSpacer(spacer_size)
+        hbox_usermanage.Add(self.punch_all_out_btn)
         hbox_usermanage.AddSpacer(spacer_size)
 
         hbox_top = wx.BoxSizer(wx.HORIZONTAL)
@@ -181,8 +231,17 @@ class MainWindow(wx.Frame):
         while self.clock_thread_run:
             time.sleep(0.1)
             current_time = time.strftime("%I:%M:%S %p")
+            curr_hour = datetime.now().hour
+            curr_mins = datetime.now().minute
             # Use wx.CallAfter to update the StaticText in the main thread
             wx.CallAfter(self.clock_display.SetLabel, current_time)
+            if _app_settings['auto_out_time'] is not None:
+                out_hour, out_min = _app_settings['auto_out_time'].split(':')
+                out_hour = int(out_hour)
+                out_min = int(out_min)
+                if out_hour > curr_hour and out_min > curr_mins:
+                    self.punch_all_out(None)
+
 
     # Remove all of the active badges from the grid; this was easier than
     # trying to remove the one-by-one.
@@ -194,6 +253,8 @@ class MainWindow(wx.Frame):
     # Draw every punched in badge on the grid with a button to punch them out
     def update_active_badges(self):
         self.clear_active_badges()
+        if _app_settings['show_active_badges'] is False:
+            return
         badges = libtt.get_badges()
         for bnum, badge in badges.items():
             if badge['status'] == 'in':
@@ -288,9 +349,18 @@ class MainWindow(wx.Frame):
     # of their badge is.
     def on_badge_num_enter(self, event):
         badge_num = event.GetString()
+
         if badge_num == 'debug':
             import wx.lib.inspection
             wx.lib.inspection.InspectionTool().Show()
+            return
+
+        if is_json(badge_num):
+            # Process as an app_settings.json config
+            pass
+            return
+
+        # Otherwise we'll just handle it like a badge input
         badges = libtt.get_badges()
         valid_badges = badges.keys()
         if badge_num in valid_badges:
@@ -475,9 +545,18 @@ class MainWindow(wx.Frame):
         self.find_user_dlg.ShowModal()
         self.find_user_dlg.Destroy()
 
+    def punch_all_out(self, event):
+        for badge_num, badge in libtt.get_badges().items():
+            if badge['status'] == 'in':
+                self.punch_out(None, badge_num)
 
-# here's how we fire up the wxPython app
+
+# Here's how we fire up the wxPython app
 if __name__ == '__main__':
+    _app_settings = get_app_settings()
+    if _app_settings is None:
+        _app_settings = default_app_settings()
+        store_app_settings()
     app = wx.App()
     frame = MainWindow(parent=None, id=-1)
     frame.Show()
