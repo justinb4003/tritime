@@ -241,7 +241,6 @@ class MainWindow(wx.Frame):
                 if out_hour > curr_hour and out_min > curr_mins:
                     self.punch_all_out(None)
 
-
     # Remove all of the active badges from the grid; this was easier than
     # trying to remove the one-by-one.
     def clear_active_badges(self):
@@ -345,7 +344,10 @@ class MainWindow(wx.Frame):
 
     # If the 'Enter' key is pressed in the badge input box this method fires
     # We'll use this to punch in or out the badge depending on what the status
-    # of their badge is.
+    # of their badge is. Usually. We also use this to permit the app to
+    # reconfigure itself with JSON entered into the badge input.
+    # The use case there is putting the JSON data into a QR code that can
+    # reconfig the whole system in a jiffy!
     def on_badge_num_enter(self, event):
         badge_num = event.GetString()
 
@@ -356,7 +358,9 @@ class MainWindow(wx.Frame):
 
         if is_json(badge_num):
             # Process as an app_settings.json config
-            pass
+            global _app_settings
+            _app_settings = json.loads(badge_num)
+            store_app_settings()
             return
 
         # Otherwise we'll just handle it like a badge input
