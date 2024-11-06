@@ -122,6 +122,10 @@ class MainWindow(wx.Frame):
                                            size=btn_size)
         self.punch_all_out_btn.Bind(wx.EVT_BUTTON, self.punch_all_out)
 
+        self.edit_settings_btn = wx.Button(self, label='Settings...',
+                                           size=btn_size)
+        self.edit_settings_btn.Bind(wx.EVT_BUTTON, self.edit_settings)
+
         self.check_time_grid = wxgrid.Grid(self)
         self.check_time_grid.CreateGrid(0, 3)
         # Set the column labels
@@ -160,6 +164,10 @@ class MainWindow(wx.Frame):
         hbox_usermanage.Add(self.punch_all_out_btn)
         hbox_usermanage.AddSpacer(spacer_size)
 
+        hbox_system = wx.BoxSizer(wx.HORIZONTAL)
+        hbox_system.Add(self.edit_settings_btn)
+        hbox_system.AddSpacer(spacer_size)
+
         hbox_top = wx.BoxSizer(wx.HORIZONTAL)
         hbox_top.Add(self.clock_display)
         hbox_top.AddStretchSpacer(20)
@@ -175,6 +183,8 @@ class MainWindow(wx.Frame):
         vbox.Add(hbox_inout)
         vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_usermanage)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(hbox_system)
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.check_time_grid, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
@@ -553,6 +563,24 @@ class MainWindow(wx.Frame):
             if badge['status'] == 'in':
                 self.punch_out(None, badge_num)
 
+    def edit_settings(self, event):
+        print("editing settings")
+        self.add_user_dlg = wx.Dialog(self, title='System Settings')
+        allow_all_out_chk = wx.CheckBox(self.add_user_dlg,
+                                        label='Allow All Out')
+        show_active_badges_chk = wx.CheckBox(self.add_user_dlg,
+                                             label='Show Active Users')
+        spacer_size = 20
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(allow_all_out_chk)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(show_active_badges_chk)
+        vbox.AddSpacer(spacer_size)
+        self.add_user_dlg.SetSizerAndFit(vbox)
+        self.add_user_dlg.Layout()
+        self.add_user_dlg.Update()
+        self.add_user_dlg.ShowModal()
+        self.add_user_dlg.Destroy()
 
 # Here's how we fire up the wxPython app
 if __name__ == '__main__':
