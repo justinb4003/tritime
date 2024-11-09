@@ -566,6 +566,28 @@ class MainWindow(wx.Frame):
             if badge['status'] == 'in':
                 self.punch_out(None, badge_num)
 
+    def add_azure_settings(self, vbox, spacer_size):
+        # create text inputs for machine name, system name, and endpoint then
+        # add them to the fbox with a spacer_sized's spacer between them.
+        machine_name_label = wx.StaticText(self.add_user_dlg,
+                                           label='Machine Name')
+        machine_name_input = wx.TextCtrl(self.add_user_dlg, size=(200, -1))
+        system_name_label = wx.StaticText(self.add_user_dlg,
+                                          label='System Name')
+        system_name_input = wx.TextCtrl(self.add_user_dlg, size=(200, -1))
+        endpoint_label = wx.StaticText(self.add_user_dlg,
+                                        label='Endpoint')
+        endpoint_input = wx.TextCtrl(self.add_user_dlg, size=(400, -1))
+        vbox.Add(machine_name_label)
+        vbox.Add(machine_name_input)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(system_name_label)
+        vbox.Add(system_name_input)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(endpoint_label)
+        vbox.Add(endpoint_input)
+        vbox.AddSpacer(spacer_size)
+
     def edit_settings(self, event):
         print("editing settings")
         self.add_user_dlg = wx.Dialog(self, title='System Settings')
@@ -589,6 +611,7 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(auto_out_time)
         vbox.AddSpacer(spacer_size)
+        self.add_azure_settings(vbox, spacer_size)
         self.add_user_dlg.SetSizerAndFit(vbox)
         self.add_user_dlg.Layout()
         self.add_user_dlg.Update()
