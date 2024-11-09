@@ -461,17 +461,17 @@ class MainWindow(wx.Frame):
         # Create a dialog that has inputs for a badge number, display name,
         # and photo URL.  When the dialog is submitted, add the user to the
         # database and update the active badges grid.
-        self.add_user_dlg = wx.Dialog(self, title='Add User')
-        badge_num_label = wx.StaticText(self.add_user_dlg,
+        self.settings_dlg = wx.Dialog(self, title='Add User')
+        badge_num_label = wx.StaticText(self.settings_dlg,
                                         label='Badge Number')
-        badge_num_input = wx.TextCtrl(self.add_user_dlg, size=(200, -1))
-        display_name_label = wx.StaticText(self.add_user_dlg,
+        badge_num_input = wx.TextCtrl(self.settings_dlg, size=(200, -1))
+        display_name_label = wx.StaticText(self.settings_dlg,
                                            label='Display Name')
-        display_name_input = wx.TextCtrl(self.add_user_dlg, size=(200, -1))
-        photo_url_label = wx.StaticText(self.add_user_dlg,
+        display_name_input = wx.TextCtrl(self.settings_dlg, size=(200, -1))
+        photo_url_label = wx.StaticText(self.settings_dlg,
                                         label='Photo URL')
-        photo_url_input = wx.TextCtrl(self.add_user_dlg, size=(400, -1))
-        submit_btn = wx.Button(self.add_user_dlg, label='Submit',
+        photo_url_input = wx.TextCtrl(self.settings_dlg, size=(400, -1))
+        submit_btn = wx.Button(self.settings_dlg, label='Submit',
                                size=(80, 80))
         submit_btn.Bind(wx.EVT_BUTTON, lambda event: self.submit_user(
             event, badge_num_input, display_name_input, photo_url_input
@@ -489,11 +489,11 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(submit_btn)
         vbox.AddSpacer(spacer_size)
-        self.add_user_dlg.SetSizerAndFit(vbox)
-        self.add_user_dlg.Layout()
-        self.add_user_dlg.Update()
-        self.add_user_dlg.ShowModal()
-        self.add_user_dlg.Destroy()
+        self.settings_dlg.SetSizerAndFit(vbox)
+        self.settings_dlg.Layout()
+        self.settings_dlg.Update()
+        self.settings_dlg.ShowModal()
+        self.settings_dlg.Destroy()
 
     def submit_user(self, event, badge_num_input, display_name_input,
                     photo_url_input):
@@ -510,7 +510,7 @@ class MainWindow(wx.Frame):
                 display_name_input.SetFocus()
             return
         libtt.create_user(badge_num, display_name, photo_url)
-        self.add_user_dlg.EndModal(True)
+        self.settings_dlg.EndModal(True)
 
     def set_badge_input(self, event, badge_num):
         self.badge_num_input.SetValue(badge_num)
@@ -566,19 +566,57 @@ class MainWindow(wx.Frame):
             if badge['status'] == 'in':
                 self.punch_out(None, badge_num)
 
+    def submit_settings(self, event, keys: list, vfuncs: list):
+        for k, v in zip(keys, vfuncs):
+            _app_settings[k] = v()
+        store_app_settings()
+        self.settings_dlg.EndModal(True)
+
     def edit_settings(self, event):
         print("editing settings")
-        self.add_user_dlg = wx.Dialog(self, title='System Settings')
-        allow_all_out_chk = wx.CheckBox(self.add_user_dlg,
+        self.settings_dlg = wx.Dialog(self, title='System Settings')
+        allow_all_out_chk = wx.CheckBox(self.settings_dlg,
                                         label='Allow All Out')
-        show_active_badges_chk = wx.CheckBox(self.add_user_dlg,
+        allow_all_out_chk.SetValue(_app_settings['allow_all_out'])
+        show_active_badges_chk = wx.CheckBox(self.settings_dlg,
                                              label='Show Active Users')
 
-        auto_out_chk = wx.CheckBox(self.add_user_dlg,
-                                   label='Auto Punch Out')
-        auto_out_time = wx.adv.TimePickerCtrl(self.add_user_dlg)
+        show_active_badges_chk.SetValue(_app_settings['show_active_badges'])
+
+        auto_out_time_val = _app_settings['auto_out_time']
+        auto_out_chk = wx.CheckBox(
+            self.settings_dlg,
+            label='Auto Punch Out'
+        )
+        auto_out_chk.SetValue(auto_out_time_val is not None)
+        auto_out_time = wx.adv.TimePickerCtrl(self.settings_dlg)
+        if auto_out_time_val is not None:
+            auto_out_time.SetValue(
+                datetime.strptime(auto_out_time_val, '%H:%M')
+            )
+
         auto_out_chk.Bind(wx.EVT_CHECKBOX,
                           lambda event: auto_out_time.Enable(event.IsChecked()))
+        submit_btn = wx.Button(self.settings_dlg, label='Submit',
+                               size=(80, 80))
+        # I'm not thrilled with this completely untyped way of doing this, but
+        # it's a quick way to get the settings dialog working.
+        keys = ['allow_all_out',
+                'show_active_badges',
+                'auto_out_time']
+        # This is a list of functions that we'll call to get the values of the
+        # controls in the dialog.
+        control_values = [
+            allow_all_out_chk.GetValue,
+            show_active_badges_chk.GetValue,
+            lambda: (auto_out_time.GetValue()
+                                  .Format('%H:%M')
+                     if auto_out_chk.IsChecked() else None),
+        ]
+        submit_btn.Bind(wx.EVT_BUTTON,
+                        lambda event: self.submit_settings(event,
+                                                           keys,
+                                                           control_values))
         spacer_size = 20
         vbox = wx.BoxSizer(wx.VERTICAL)
         vbox.Add(allow_all_out_chk)
@@ -589,12 +627,15 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(auto_out_time)
         vbox.AddSpacer(spacer_size)
+        vbox.Add(submit_btn)
+        vbox.AddSpacer(spacer_size)
+
         auto_out_time.Enable(event.IsChecked())
-        self.add_user_dlg.SetSizerAndFit(vbox)
-        self.add_user_dlg.Layout()
-        self.add_user_dlg.Update()
-        self.add_user_dlg.ShowModal()
-        self.add_user_dlg.Destroy()
+        self.settings_dlg.SetSizerAndFit(vbox)
+        self.settings_dlg.Layout()
+        self.settings_dlg.Update()
+        self.settings_dlg.ShowModal()
+        self.settings_dlg.Destroy()
 
 # Here's how we fire up the wxPython app
 if __name__ == '__main__':
