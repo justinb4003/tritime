@@ -623,12 +623,13 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(auto_out_time)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(submit_btn)
-        vbox.AddSpacer(spacer_size)
 
         auto_out_time.Enable(event.IsChecked())
         # Add extra settings here
         # END Extra settings
+
+        vbox.Add(submit_btn)
+        vbox.AddSpacer(spacer_size)
         submit_btn.Bind(wx.EVT_BUTTON,
                         lambda event: self.submit_settings(event,
                                                            keys,
