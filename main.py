@@ -589,6 +589,7 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(auto_out_time)
         vbox.AddSpacer(spacer_size)
+        auto_out_time.Enable(event.IsChecked())
         self.add_user_dlg.SetSizerAndFit(vbox)
         self.add_user_dlg.Layout()
         self.add_user_dlg.Update()
