@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
+# TODO: Finish settings dialog next
+
 import os
 import wx
+import wx.adv
+import json
 import time
 import requests
 import wx.grid as wxgrid
@@ -11,6 +15,50 @@ import lib.trireport as libtr
 from io import BytesIO
 from threading import Thread
 from datetime import datetime
+
+
+_app_settings: dict[str, any] = {}
+
+
+def default_app_settings() -> dict[str, any]:
+    return {
+        'allow_all_out': True,
+        'show_active_badges': True,
+        'auto_out_time': '20:30',
+        'pay_period_days': 14,
+    }
+
+
+def modifies_settings(func):
+    def wrapper(*args, **kwargs):
+        func(*args, **kwargs)
+        store_app_settings()
+    return wrapper
+
+
+def get_app_settings():
+    try:
+        with open('app_settings.json', 'r') as f:
+            obj = json.loads(f.read())
+    except json.decoder.JSONDecodeError:
+        obj = None
+    except FileNotFoundError:
+        obj = None
+    return obj
+
+
+def store_app_settings():
+    json_str = json.dumps(_app_settings)
+    with open('app_settings.json', 'w') as f:
+        f.write(json_str)
+
+
+def is_json(myjson):
+    try:
+        json.loads(myjson)
+    except ValueError:
+        return False
+    return True
 
 
 # If we have a URL (http:// or https://), download the image from the URL
@@ -37,40 +85,6 @@ def download_image(self, url, width=64, height=64):
         print('exception loaded')
         valid_image = False
     return image, valid_image
-
-
-class ExportDialog(wx.Frame):
-    def __init__(self):
-        super().__init__(None, title="Export Data", size=(300, 200))
-        panel = wx.Panel(self)
-        export_button = wx.Button(panel, label="Export Data", pos=(50, 50))
-        export_button.Bind(wx.EVT_BUTTON, self.on_export)
-
-    def on_export(self, event):
-        # Configure file dialog options
-        wildcard = (
-            "Excel files (*.xlsx)|*.xlsx|"
-            "CSV files (*.csv)|*.csv|"
-            "Parquet files (*.parquet)|*.parquet"
-        )
-
-        # Default directory and filename for export
-        dialog = wx.FileDialog(
-            self, message="Export data",
-            defaultDir="",
-            defaultFile="export.xlsx",
-            wildcard=wildcard,
-            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
-        )
-
-        # Show the dialog and get user input
-        if dialog.ShowModal() == wx.ID_OK:
-            # Get the chosen filename and path
-            filepath = dialog.GetPath()
-            wx.MessageBox(f"File chosen: {filepath}", "Export Complete")
-
-        dialog.Destroy()
-
 
 
 class MainWindow(wx.Frame):
@@ -107,6 +121,13 @@ class MainWindow(wx.Frame):
         self.add_user_btn.Bind(wx.EVT_BUTTON, self.add_user)
         self.find_user_btn = wx.Button(self, label='Search', size=btn_size)
         self.find_user_btn.Bind(wx.EVT_BUTTON, self.find_user)
+        self.punch_all_out_btn = wx.Button(self, label='Punch All Out!',
+                                           size=btn_size)
+        self.punch_all_out_btn.Bind(wx.EVT_BUTTON, self.punch_all_out)
+
+        self.edit_settings_btn = wx.Button(self, label='Settings...',
+                                           size=btn_size)
+        self.edit_settings_btn.Bind(wx.EVT_BUTTON, self.edit_settings)
 
         self.check_time_grid = wxgrid.Grid(self)
         self.check_time_grid.CreateGrid(0, 3)
@@ -143,6 +164,12 @@ class MainWindow(wx.Frame):
         hbox_usermanage.AddSpacer(spacer_size)
         hbox_usermanage.Add(self.find_user_btn)
         hbox_usermanage.AddSpacer(spacer_size)
+        hbox_usermanage.Add(self.punch_all_out_btn)
+        hbox_usermanage.AddSpacer(spacer_size)
+
+        hbox_system = wx.BoxSizer(wx.HORIZONTAL)
+        hbox_system.Add(self.edit_settings_btn)
+        hbox_system.AddSpacer(spacer_size)
 
         hbox_top = wx.BoxSizer(wx.HORIZONTAL)
         hbox_top.Add(self.clock_display)
@@ -159,6 +186,8 @@ class MainWindow(wx.Frame):
         vbox.Add(hbox_inout)
         vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_usermanage)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(hbox_system)
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.check_time_grid, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
@@ -187,15 +216,6 @@ class MainWindow(wx.Frame):
         self.Destroy()
 
     def export_data(self, event):
-        # TODO: File dialog prompt to choose location
-        class ExportDialog(wx.Frame):
-    def __init__(self):
-        super().__init__(None, title="Export Data", size=(300, 200))
-        panel = wx.Panel(self)
-        export_button = wx.Button(panel, label="Export Data", pos=(50, 50))
-        export_button.Bind(wx.EVT_BUTTON, self.on_export)
-
-    def on_export(self, event):
         # Configure file dialog options
         wildcard = (
             "Excel files (*.xlsx)|*.xlsx|"
@@ -217,17 +237,22 @@ class MainWindow(wx.Frame):
             # Get the chosen filename and path
             filepath = dialog.GetPath()
             wx.MessageBox(f"File chosen: {filepath}", "Export Complete")
-
         dialog.Destroy()
-
-        libtr.export_to_excel()
+        libtr.export_to_excel(filepath)
 
     def update_clock(self):
         while self.clock_thread_run:
             time.sleep(0.1)
             current_time = time.strftime("%I:%M:%S %p")
+            curr_hour = datetime.now().hour
+            curr_mins = datetime.now().minute
             # Use wx.CallAfter to update the StaticText in the main thread
             wx.CallAfter(self.clock_display.SetLabel, current_time)
+            auto_out_time = _app_settings.get('auto_out_time', None)
+            if auto_out_time is not None:
+                out_hour, out_min = map(int, auto_out_time.split(':'))
+                if out_hour > curr_hour and out_min > curr_mins:
+                    self.punch_all_out(None)
 
     # Remove all of the active badges from the grid; this was easier than
     # trying to remove the one-by-one.
@@ -239,6 +264,8 @@ class MainWindow(wx.Frame):
     # Draw every punched in badge on the grid with a button to punch them out
     def update_active_badges(self):
         self.clear_active_badges()
+        if _app_settings['show_active_badges'] is False:
+            return
         badges = libtt.get_badges()
         for bnum, badge in badges.items():
             if badge['status'] == 'in':
@@ -330,12 +357,26 @@ class MainWindow(wx.Frame):
 
     # If the 'Enter' key is pressed in the badge input box this method fires
     # We'll use this to punch in or out the badge depending on what the status
-    # of their badge is.
+    # of their badge is. Usually. We also use this to permit the app to
+    # reconfigure itself with JSON entered into the badge input.
+    # The use case there is putting the JSON data into a QR code that can
+    # reconfig the whole system in a jiffy!
     def on_badge_num_enter(self, event):
         badge_num = event.GetString()
+
         if badge_num == 'debug':
             import wx.lib.inspection
             wx.lib.inspection.InspectionTool().Show()
+            return
+
+        if is_json(badge_num):
+            # Process as an app_settings.json config
+            global _app_settings
+            _app_settings = json.loads(badge_num)
+            store_app_settings()
+            return
+
+        # Otherwise we'll just handle it like a badge input
         badges = libtt.get_badges()
         valid_badges = badges.keys()
         if badge_num in valid_badges:
@@ -520,9 +561,46 @@ class MainWindow(wx.Frame):
         self.find_user_dlg.ShowModal()
         self.find_user_dlg.Destroy()
 
+    def punch_all_out(self, event):
+        for badge_num, badge in libtt.get_badges().items():
+            if badge['status'] == 'in':
+                self.punch_out(None, badge_num)
 
-# here's how we fire up the wxPython app
+    def edit_settings(self, event):
+        print("editing settings")
+        self.add_user_dlg = wx.Dialog(self, title='System Settings')
+        allow_all_out_chk = wx.CheckBox(self.add_user_dlg,
+                                        label='Allow All Out')
+        show_active_badges_chk = wx.CheckBox(self.add_user_dlg,
+                                             label='Show Active Users')
+
+        auto_out_chk = wx.CheckBox(self.add_user_dlg,
+                                   label='Auto Punch Out')
+        auto_out_time = wx.adv.TimePickerCtrl(self.add_user_dlg)
+        auto_out_chk.Bind(wx.EVT_CHECKBOX,
+                          lambda event: auto_out_time.Enable(event.IsChecked()))
+        spacer_size = 20
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(allow_all_out_chk)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(show_active_badges_chk)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(auto_out_chk)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(auto_out_time)
+        vbox.AddSpacer(spacer_size)
+        self.add_user_dlg.SetSizerAndFit(vbox)
+        self.add_user_dlg.Layout()
+        self.add_user_dlg.Update()
+        self.add_user_dlg.ShowModal()
+        self.add_user_dlg.Destroy()
+
+# Here's how we fire up the wxPython app
 if __name__ == '__main__':
+    _app_settings = get_app_settings()
+    if _app_settings is None:
+        _app_settings = default_app_settings()
+        store_app_settings()
     app = wx.App()
     frame = MainWindow(parent=None, id=-1)
     frame.Show()
