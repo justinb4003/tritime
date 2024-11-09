@@ -639,6 +639,7 @@ class MainWindow(wx.Frame):
         self.settings_dlg.ShowModal()
         self.settings_dlg.Destroy()
 
+
 # Here's how we fire up the wxPython app
 if __name__ == '__main__':
     _app_settings = get_app_settings()
