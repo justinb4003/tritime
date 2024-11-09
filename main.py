@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+# TODO: Finish settings dialog next
+
 import os
 import wx
+import wx.adv
 import json
 import time
 import requests
@@ -570,11 +573,21 @@ class MainWindow(wx.Frame):
                                         label='Allow All Out')
         show_active_badges_chk = wx.CheckBox(self.add_user_dlg,
                                              label='Show Active Users')
+
+        auto_out_chk = wx.CheckBox(self.add_user_dlg,
+                                   label='Auto Punch Out')
+        auto_out_time = wx.adv.TimePickerCtrl(self.add_user_dlg)
+        auto_out_chk.Bind(wx.EVT_CHECKBOX,
+                          lambda event: auto_out_time.Enable(event.IsChecked()))
         spacer_size = 20
         vbox = wx.BoxSizer(wx.VERTICAL)
         vbox.Add(allow_all_out_chk)
         vbox.AddSpacer(spacer_size)
         vbox.Add(show_active_badges_chk)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(auto_out_chk)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(auto_out_time)
         vbox.AddSpacer(spacer_size)
         self.add_user_dlg.SetSizerAndFit(vbox)
         self.add_user_dlg.Layout()
