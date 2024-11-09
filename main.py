@@ -653,7 +653,7 @@ class MainWindow(wx.Frame):
         # Add extra settings here
         self.add_azure_settings(self.settings_dlg, vbox, spacer_size,
                                 keys, control_values)
-        # END extra settings
+        # END Extra settings
 
         vbox.Add(submit_btn)
         vbox.AddSpacer(spacer_size)
