@@ -566,7 +566,7 @@ class MainWindow(wx.Frame):
             if badge['status'] == 'in':
                 self.punch_out(None, badge_num)
 
-    def add_azure_settings(self, dlg, vbox, spacer_size):
+    def add_azure_settings(self, dlg, vbox, spacer_size, keys, vfuncs):
         # create text inputs for machine name, system name, and endpoint then
         # add them to the fbox with a spacer_sized's spacer between them.
         machine_name_label = wx.StaticText(dlg, label='Machine Name')
@@ -575,6 +575,12 @@ class MainWindow(wx.Frame):
         system_name_input = wx.TextCtrl(dlg, size=(200, -1))
         endpoint_label = wx.StaticText(dlg, label='Endpoint')
         endpoint_input = wx.TextCtrl(dlg, size=(400, -1))
+        keys.extend(['machine_name', 'system_name', 'endpoint'])
+        vfuncs.extend([
+            machine_name_input.GetValue,
+            system_name_input.GetValue,
+            endpoint_input.GetValue,
+        ])
         vbox.Add(machine_name_label)
         vbox.Add(machine_name_input)
         vbox.AddSpacer(spacer_size)
@@ -632,10 +638,6 @@ class MainWindow(wx.Frame):
                                   .Format('%H:%M')
                      if auto_out_chk.IsChecked() else None),
         ]
-        submit_btn.Bind(wx.EVT_BUTTON,
-                        lambda event: self.submit_settings(event,
-                                                           keys,
-                                                           control_values))
         spacer_size = 20
         vbox = wx.BoxSizer(wx.VERTICAL)
         vbox.Add(allow_all_out_chk)
@@ -646,11 +648,18 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(auto_out_time)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(submit_btn)
-        vbox.AddSpacer(spacer_size)
 
         auto_out_time.Enable(event.IsChecked())
-        self.add_azure_settings(self.settings_dlg, vbox, spacer_size)
+        # Add extra settings here
+        self.add_azure_settings(self.settings_dlg, vbox, spacer_size,
+                                keys, control_values)
+
+        vbox.Add(submit_btn)
+        vbox.AddSpacer(spacer_size)
+        submit_btn.Bind(wx.EVT_BUTTON,
+                        lambda event: self.submit_settings(event,
+                                                           keys,
+                                                           control_values))
         self.settings_dlg.SetSizerAndFit(vbox)
         self.settings_dlg.Layout()
         self.settings_dlg.Update()
