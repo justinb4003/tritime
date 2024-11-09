@@ -613,10 +613,6 @@ class MainWindow(wx.Frame):
                                   .Format('%H:%M')
                      if auto_out_chk.IsChecked() else None),
         ]
-        submit_btn.Bind(wx.EVT_BUTTON,
-                        lambda event: self.submit_settings(event,
-                                                           keys,
-                                                           control_values))
         spacer_size = 20
         vbox = wx.BoxSizer(wx.VERTICAL)
         vbox.Add(allow_all_out_chk)
@@ -631,6 +627,10 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
 
         auto_out_time.Enable(event.IsChecked())
+        submit_btn.Bind(wx.EVT_BUTTON,
+                        lambda event: self.submit_settings(event,
+                                                           keys,
+                                                           control_values))
         self.settings_dlg.SetSizerAndFit(vbox)
         self.settings_dlg.Layout()
         self.settings_dlg.Update()
