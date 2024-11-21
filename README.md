@@ -66,5 +66,5 @@ comitted to the ```release``` branch will execute a build, tag the code with
 an automatic version number, and create a Github release.
 
 They  use ```pyinstaller``` to create a single executable that has a Python
-interpreter built into it. Currently only Linux amd64 and Windows x64 builds are
-created. Plans for a proper arm64 build are in progress.
+interpreter built into it. Currently only Linux amd64, arm64 and Windows x64 builds are
+created. It might be possible to do an OS X build but I haven't gotten around to it. I'd also like the arm64 build to be faster; it's like 30 minutes now.
