@@ -20,7 +20,7 @@ macOS it's a macOS app. It also operates in a fairly straight forward manner.
 
 Releases can be found in this repository in the
 [releases](https://github.com/justinb4003/tritime/releases) section. There are
-automated builds created when anything is checkecked into the ```release```
+automated builds created when anything is checked into the ```release```
 branch.
 
 ## Development
