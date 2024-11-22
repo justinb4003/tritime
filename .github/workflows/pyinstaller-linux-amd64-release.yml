@@ -31,18 +31,18 @@ jobs:
         run: pyinstaller --clean main.spec
 
       - name: Move in support data files for runtime
-        run: cp unknown_badge.png dist/linux_amd64/
+        run: cp unknown_badge.png dist/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tritime-linux-amd64
-          path: dist/linux_amd64/
+          path: dist/
 
       - name: Cache Build Output
         uses: actions/cache@v3
         with:
-          path: ./dist/linux_amd64/
+          path: ./dist/
           key: linux-amd64-app-build-${{ github.ref_name }}-${{ github.sha }}
           enableCrossOsArchive: true
 
