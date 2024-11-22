@@ -36,13 +36,13 @@ jobs:
         run: pyinstaller --clean main.spec
 
       - name: Move in support data files for runtime
-        run: cp unknown_badge.png dist/
+        run: cp unknown_badge.png dist/linux_arm64/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tritime-linux-arm64
-          path: dist/**
+          path: dist/linux_arm64/
 
       - name: Cache Build Output
         uses: actions/cache@v3
