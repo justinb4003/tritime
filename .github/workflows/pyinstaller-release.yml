@@ -107,7 +107,7 @@ jobs:
           echo "Listing files in ./:"
           ls -l ./
           ls -l ./dist/linux_amd64/
-          ls -l ./dist/linux_arm4/
+          ls -l ./dist/linux_arm64/
           ls -l ./dist/windows/
 
       - name: Create Windows ZIP archive
