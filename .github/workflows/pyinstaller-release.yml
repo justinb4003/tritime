@@ -116,11 +116,11 @@ jobs:
 
       - name: Create Linxu amd64 archive
         run: |
-          tar -czvf ./tritime-linux-amd64.tar.gz  --transform='s,^dist/linux_amd64/,,' ./dist/linux_amd64/
+          cd dist/linux_amd64/ && tar -czvf ../../tritime-linux-amd64.tar.gz  ./
 
       - name: Create Linxu arm64 archive
         run: |
-          tar -czvf ./tritime-linux-arm64.tar.gz  --transform='s,^dist/linux_arm64/,,' ./dist/linux_arm64/
+          cd dist/linux_arm64/ && tar -czvf ../../tritime-linux-arm64.tar.gz ./
 
       - name: Create GitHub Release
         id: create_release
