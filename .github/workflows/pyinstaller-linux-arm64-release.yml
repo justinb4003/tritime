@@ -33,20 +33,20 @@ jobs:
         run: pip install pyinstaller
 
       - name: Build Executable
-        run: pyinstaller --clean main.spec
+        run: pyinstaller --clean main.spec --distpath ./dist/linux_arm64/
 
       - name: Move in support data files for runtime
-        run: cp unknown_badge.png dist/
+        run: cp unknown_badge.png dist/linux_arm64/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tritime-linux-arm64
-          path: dist/
+          path: dist/linux_arm64/
 
       - name: Cache Build Output
         uses: actions/cache@v3
         with:
-          path: ./dist/
+          path: ./dist/linux_arm64/
           key: linux-arm64-app-build-${{ github.ref_name }}-${{ github.sha }}
           enableCrossOsArchive: true
