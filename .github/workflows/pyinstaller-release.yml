@@ -50,6 +50,16 @@ jobs:
             linux_cache=$(gh cache list --json key --jq ".[] | select(.key == \"linux-amd64-app-build-${{ github.ref_name }}-${{ github.sha }}\")")
             linux_arm_cache=$(gh cache list --json key --jq ".[] | select(.key == \"linux-arm64-app-build-${{ github.ref_name }}-${{ github.sha }}\")")
 
+            if [ -n "$windows_cache" ]; then
+              echo "Windows cache found."
+            fi
+            if [ -n "$linux_cache" ]; then
+              echo "Linux amd64 cache found."
+            fi
+            if [ -n "$linux_arm_cache" ]; then
+            echo "Linux arm64 cache found."
+            fi
+
             if [ -n "$windows_cache" ] && [ -n "$linux_cache" ] && [ -n "$linux_arm_cache" ]; then
               echo "All caches found! Proceeding with build."
               success=true
