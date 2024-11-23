@@ -114,11 +114,11 @@ jobs:
         run: |
           zip -jr ./tritime-win64.zip ./dist/windows/
 
-      - name: Create Linxu amd64 archive
+      - name: Create Linux amd64 archive
         run: |
           cd dist/linux_amd64/ && tar -czvf ../../tritime-linux-amd64.tar.gz  ./
 
-      - name: Create Linxu arm64 archive
+      - name: Create Linux arm64 archive
         run: |
           cd dist/linux_arm64/ && tar -czvf ../../tritime-linux-arm64.tar.gz ./
 
