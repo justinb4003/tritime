@@ -56,7 +56,7 @@ jobs:
               echo "Linux amd64 cache found."
             fi
 
-            if [ -n "$windows_cache" ] && [ -n "$linux_cache" ] && [ -n "$linux_arm_cache" ]; then
+            if [ -n "$windows_cache" ] && [ -n "$linux_cache" ]; then
               echo "All caches found! Proceeding with build."
               success=true
               break
