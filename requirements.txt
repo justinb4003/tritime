@@ -1,3 +1,4 @@
+attrdict3==2.0.2
 ipykernel==6.29.5
 ipython==8.12.3
 matplotlib-inline==0.1.7
@@ -10,4 +11,3 @@ qrcode==8.0
 requests==2.32.3
 requests-toolbelt==0.10.1
 wxPython==4.2.0
-attrdict3==2.0.2
