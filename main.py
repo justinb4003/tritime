@@ -643,9 +643,10 @@ class MainWindow(wx.Frame):
 
 # Here's how we fire up the wxPython app
 if __name__ == '__main__':
-    import pyi_splash
-    pyi_splash.close()
-    print('main hit')
+    import sys
+    if hasattr(sys, 'frozen'):
+        import pyi_splash
+        pyi_splash.close()
     _app_settings = get_app_settings()
     if _app_settings is None:
         _app_settings = default_app_settings()
