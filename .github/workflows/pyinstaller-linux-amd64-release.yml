@@ -3,11 +3,11 @@ name: Linux amd64 Release Build
 on:
   push:
     branches:
-      - release  # Trigger the workflow on push events to the main branch
+      - release  # Trigger the workflow on push events to the release branch
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # You can specify other OS like windows-latest if needed
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
