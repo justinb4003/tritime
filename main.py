@@ -403,6 +403,7 @@ class MainWindow(wx.Frame):
     def punch_out(self, event, badge_num=None):
         bni = self.badge_num_input
         badge = bni.GetValue() if badge_num is None else badge_num
+        badge = self.lookup_alt(libtt.get_badges(), badge) 
         dt = datetime.now()
         print(f'Punch Out {badge}')
         badges = libtt.punch_out(badge, dt)
