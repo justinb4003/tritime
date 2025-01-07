@@ -248,11 +248,13 @@ class MainWindow(wx.Frame):
             curr_mins = datetime.now().minute
             # Use wx.CallAfter to update the StaticText in the main thread
             wx.CallAfter(self.clock_display.SetLabel, current_time)
+            notused = """
             auto_out_time = _app_settings.get('auto_out_time', None)
             if auto_out_time is not None:
                 out_hour, out_min = map(int, auto_out_time.split(':'))
                 if out_hour > curr_hour and out_min > curr_mins:
                     self.punch_all_out(None)
+            """
 
     # Remove all of the active badges from the grid; this was easier than
     # trying to remove the one-by-one.
