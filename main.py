@@ -392,6 +392,7 @@ class MainWindow(wx.Frame):
     # manipulation to the libtt module.
     def punch_in(self, event):
         badge = self.badge_num_input.GetValue()
+        badge = badge.strip()
         badge = self.lookup_alt(libtt.get_badges(), badge)
         dt = datetime.now()
         print(f'Punch In {badge}')
@@ -417,6 +418,8 @@ class MainWindow(wx.Frame):
     # Adds up all of the time a badge has been punched in.
     def check_time_total(self, event):
         badge = self.badge_num_input.GetValue()
+        badge = badge.strip()
+        badge = self.lookup_alt(libtt.get_badges(), badge)
         print(f'Check Time {badge}')
         # Create a grid
         punch_data = libtt.read_punches(badge)
@@ -501,6 +504,7 @@ class MainWindow(wx.Frame):
     def submit_user(self, event, badge_num_input, display_name_input,
                     photo_url_input):
         badge_num = badge_num_input.GetValue()
+        badge_num = badge_num.strip()
         display_name = display_name_input.GetValue()
         photo_url = photo_url_input.GetValue()
         # Don't allow submit unless a name and number are in
