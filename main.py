@@ -125,7 +125,7 @@ class MainWindow(wx.Frame):
         self.out_btn = wx.Button(self, label='Out', size=btn_size)
         self.out_btn.Bind(wx.EVT_BUTTON, self.punch_out)
         self.check_time = wx.Button(self, label='Check Time', size=btn_size)
-        self.check_time.Bind(wx.EVT_BUTTON, self.check_time_total)
+        self.check_time.Bind(wx.EVT_BUTTON, self.check_time_dialog)
 
         self.add_user_btn = wx.Button(self, label='Add User', size=btn_size)
         self.add_user_btn.Bind(wx.EVT_BUTTON, self.add_user)
@@ -139,17 +139,9 @@ class MainWindow(wx.Frame):
                                            size=btn_size)
         self.edit_settings_btn.Bind(wx.EVT_BUTTON, self.edit_settings)
 
-        self.check_time_grid = wxgrid.Grid(self)
-        self.check_time_grid.CreateGrid(0, 3)
-        # Set the column labels
-        self.check_time_grid.SetColLabelValue(0, 'Time In')
-        self.check_time_grid.SetColLabelValue(1, 'Time Out')
-        self.check_time_grid.SetColLabelValue(2, 'Hours')
-        self.check_time_grid.HideRowLabels()
-
         # Disable all of the buttons; they will enable when a valid badge is
         # entered.
-        for b in [self.in_btn, self.out_btn, self.check_time]:
+        for b in [self.in_btn, self.out_btn]:
             b.Disable()
 
         # Create a grid that lets us show everybody punched in
@@ -159,14 +151,14 @@ class MainWindow(wx.Frame):
         # This lets us put a space to the left of everything by putting our
         # other boxes in a horizontal box witha spacer at the beginning.
         outerhbox = wx.BoxSizer(wx.HORIZONTAL)
+        vbox_buttons = wx.BoxSizer(wx.VERTICAL)
+
         hbox_inout = wx.BoxSizer(wx.HORIZONTAL)
         hbox_inout.Add(self.in_btn)
         hbox_inout.AddSpacer(spacer_size)
         hbox_inout.Add(self.out_btn)
         hbox_inout.AddSpacer(spacer_size)
         hbox_inout.Add(self.check_time)
-        hbox_inout.AddSpacer(spacer_size)
-        hbox_inout.Add(self.active_badge_sizer, flag=wx.EXPAND)
         hbox_inout.AddSpacer(spacer_size)
 
         hbox_usermanage = wx.BoxSizer(wx.HORIZONTAL)
@@ -181,10 +173,18 @@ class MainWindow(wx.Frame):
         hbox_system.Add(self.edit_settings_btn)
         hbox_system.AddSpacer(spacer_size)
 
+        vbox_buttons.Add(hbox_inout)
+        vbox_buttons.Add(hbox_usermanage)
+        vbox_buttons.Add(hbox_system)
+
         hbox_top = wx.BoxSizer(wx.HORIZONTAL)
         hbox_top.Add(self.clock_display)
         hbox_top.AddStretchSpacer(20)
         hbox_top.Add(self.export_btn)
+
+        hbox_buttons_checkgrid = wx.BoxSizer(wx.HORIZONTAL)
+        hbox_buttons_checkgrid.Add(vbox_buttons)
+        hbox_buttons_checkgrid.Add(self.active_badge_sizer)
 
         vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_top, 1, wx.EXPAND)
@@ -193,14 +193,10 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(hbox_inout)
+        vbox.Add(hbox_buttons_checkgrid, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(hbox_usermanage)
-        vbox.AddSpacer(spacer_size)
-        vbox.Add(hbox_system)
-        vbox.AddSpacer(spacer_size)
-        vbox.Add(self.check_time_grid, wx.EXPAND)
-        vbox.AddSpacer(spacer_size)
+
+        # TODO: Add check time grid back somewhere
 
         outerhbox.AddSpacer(spacer_size)
         outerhbox.Add(vbox, wx.EXPAND)
@@ -327,7 +323,6 @@ class MainWindow(wx.Frame):
         self.in_btn.Disable()
         self.out_btn.Disable()
         self.check_time.Disable()
-        self.check_time_grid.Hide()
         self.badge_num_input.SetFocus()
 
     # Users can be identified by more than one code; this method will look up
@@ -346,7 +341,6 @@ class MainWindow(wx.Frame):
         self.in_btn.Disable()
         self.out_btn.Disable()
         self.check_time.Disable()
-        self.check_time_grid.Hide()
         badge_num = event.GetString()
         badges = libtt.get_badges()
         valid_badges = badges.keys()
@@ -437,49 +431,88 @@ class MainWindow(wx.Frame):
 
     # Adds up all of the time a badge has been punched in.
     @return_focus
-    def check_time_total(self, event):
-        badge = self.get_entered_badge()
-        print(f'Check Time {badge}')
-        # Create a grid
-        punch_data = libtt.read_punches(badge)
-        punch_data.reverse()
-        curr_rows = self.check_time_grid.GetNumberRows()
-        new_rows = len(punch_data) + 1
-        if new_rows > curr_rows:
-            self.check_time_grid.AppendRows(new_rows-curr_rows)
-        elif new_rows < curr_rows:
-            self.check_time_grid.DeleteRows(new_rows, curr_rows-new_rows)
+    def check_time_dialog(self, event):
+        # Create a dialog that has inputs for a badge number, display name,
+        # and photo URL.  When the dialog is submitted, add the user to the
+        # database and update the active badges grid.
+        def badge_change(event):
+            badge = event.GetString().strip()
+            badge = self.lookup_alt(libtt.get_badges(), badge)
+            print(f'Check Time {badge}')
+            # Create a grid
+            punch_data = libtt.read_punches(badge)
+            punch_data.reverse()
+            curr_rows = check_time_grid.GetNumberRows()
+            new_rows = len(punch_data) + 1
+            if new_rows > curr_rows:
+                check_time_grid.AppendRows(new_rows-curr_rows)
+            elif new_rows < curr_rows:
+                check_time_grid.DeleteRows(new_rows, curr_rows-new_rows)
 
-        # Populate the grid with data
-        total_duration = 0
-        for row_index, row_data in enumerate(punch_data):
-            instr = 'N/A - Error'
-            outstr = 'N/A - Error'
-            duration = ''
-            if 'ts_in' in row_data:
-                instr = str(row_data['ts_in'])
-            if 'ts_out' in row_data:
-                outstr = str(row_data['ts_out'])
-            if 'duration' in row_data:
-                d = row_data['duration']
-                if d is None:
-                    d = 0
-                total_duration += d
-                duration = str(round(d/3600, 2))
-            self.check_time_grid.SetCellValue(row_index+1, 0, instr)
-            self.check_time_grid.SetCellValue(row_index+1, 1, outstr)
-            self.check_time_grid.SetCellValue(row_index+1, 2, duration)
+            # Populate the grid with data
+            total_duration = 0
+            for row_index, row_data in enumerate(punch_data):
+                instr = 'N/A - Error'
+                outstr = 'N/A - Error'
+                duration = ''
+                if 'ts_in' in row_data:
+                    instr = str(row_data['ts_in'])
+                if 'ts_out' in row_data:
+                    outstr = str(row_data['ts_out'])
+                if 'duration' in row_data:
+                    d = row_data['duration']
+                    if d is None:
+                        d = 0
+                    total_duration += d
+                    duration = str(round(d/3600, 2))
+                check_time_grid.SetCellValue(row_index+1, 0, instr)
+                check_time_grid.SetCellValue(row_index+1, 1, outstr)
+                check_time_grid.SetCellValue(row_index+1, 2, duration)
 
-        self.check_time_grid.SetCellValue(0, 2,
-                                          str(round(total_duration/3600, 2)))
+            check_time_grid.SetCellValue(0, 2,
+                                        str(round(total_duration/3600, 2)))
+        
+            check_time_grid.Show()
+            check_time_grid.Layout()
+            check_time_grid.Update()
+            check_time_grid.AutoSize()
+            checktime_dlg.SetSizerAndFit(vbox)
+            checktime_dlg.Layout()
+            checktime_dlg.Update()
+
+
+        checktime_dlg = wx.Dialog(self, title='Checking Time...')
+        check_time_grid = wxgrid.Grid(checktime_dlg)
+        check_time_grid.CreateGrid(0, 3)
+        # Set the column labels
+        check_time_grid.SetColLabelValue(0, 'Time In')
+        check_time_grid.SetColLabelValue(1, 'Time Out')
+        check_time_grid.SetColLabelValue(2, 'Hours')
+        check_time_grid.HideRowLabels()
+
+        badge_input = wx.TextCtrl(checktime_dlg, size=(200, -1))
+        badge_input.Bind(wx.EVT_TEXT, badge_change)
+        submit_btn = wx.Button(checktime_dlg, label='Close',
+                               size=(80, 80))
+        submit_btn.Bind(wx.EVT_BUTTON, 
+                        lambda event: checktime_dlg.EndModal(True))
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.AddSpacer(20)
+        vbox.Add(badge_input)
+        vbox.AddSpacer(20)
+        vbox.Add(check_time_grid, flag=wx.EXPAND)
+        vbox.AddSpacer(20)
+        vbox.Add(submit_btn)
+        
 
         # Fit the grid to the size of the window
-        self.check_time_grid.Show()
-        self.check_time_grid.Layout()
-        self.check_time_grid.Update()
-        self.check_time_grid.AutoSize()
-        self.Layout()
-        self.Update()
+        checktime_dlg.SetSizerAndFit(vbox)
+        checktime_dlg.Layout()
+        checktime_dlg.Update()
+
+        checktime_dlg.ShowModal()
+        checktime_dlg.Destroy()
+        return
 
     @return_focus
     def add_user(self, event):
@@ -497,8 +530,8 @@ class MainWindow(wx.Frame):
         photo_url_label = wx.StaticText(self.settings_dlg,
                                         label='Photo URL')
         photo_url_input = wx.TextCtrl(self.settings_dlg, size=(400, -1))
-        submit_btn = wx.Button(self.settings_dlg, label='Submit',
-                               size=(80, 80))
+        submit_btn = wx.Button(self.settings_dlg, label='Save and Close',
+                               size=(120, 80))
         submit_btn.Bind(wx.EVT_BUTTON, lambda event: self.submit_user(
             event, badge_num_input, display_name_input, photo_url_input
         ))
