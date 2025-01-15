@@ -12,6 +12,7 @@ import wx.grid as wxgrid
 import lib.tritime as libtt
 import lib.trireport as libtr
 
+from functools import wraps
 from io import BytesIO
 from threading import Thread
 from datetime import datetime
@@ -30,6 +31,7 @@ def default_app_settings() -> dict[str, any]:
 
 
 def modifies_settings(func):
+    @wraps
     def wrapper(*args, **kwargs):
         func(*args, **kwargs)
         store_app_settings()
@@ -88,9 +90,17 @@ def download_image(self, url, width=64, height=64):
 
 
 class MainWindow(wx.Frame):
+
+    def return_focus(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            result = func(self, *args, **kwargs)
+            self.badge_num_input.SetFocus()
+            return result
+        return wrapper
+
     # Set up the main window for the application; this is where most controls
     # get laid out.
-
     def __init__(self, parent, id):
         wx.Frame.__init__(self, parent, id,
                           'TriTime', size=(1024, 800))
@@ -215,6 +225,7 @@ class MainWindow(wx.Frame):
         self.clock_thread.join()
         self.Destroy()
 
+    @return_focus
     def export_data(self, event):
         # Configure file dialog options
         wildcard = (
@@ -363,15 +374,18 @@ class MainWindow(wx.Frame):
     # reconfigure itself with JSON entered into the badge input.
     # The use case there is putting the JSON data into a QR code that can
     # reconfig the whole system in a jiffy!
+    @return_focus
     def on_badge_num_enter(self, event):
-        badge_num = event.GetString()
+        badge_num = self.get_entered_badge()
 
         if badge_num == 'debug':
             import wx.lib.inspection
             wx.lib.inspection.InspectionTool().Show()
             return
 
-        if is_json(badge_num):
+        # if is_json(badge_num):
+        if False:  # We can skip this for now.
+            print(f' this is json: {badge_num}')
             # Process as an app_settings.json config
             global _app_settings
             _app_settings = json.loads(badge_num)
@@ -388,12 +402,17 @@ class MainWindow(wx.Frame):
             elif badge_data['status'] == 'out':
                 self.punch_in(event)
 
-    # Buttons to punch in will call this method; we pass off all the data
-    # manipulation to the libtt module.
-    def punch_in(self, event):
+    def get_entered_badge(self) -> str:
         badge = self.badge_num_input.GetValue()
         badge = badge.strip()
         badge = self.lookup_alt(libtt.get_badges(), badge)
+        return badge
+
+    # Buttons to punch in will call this method; we pass off all the data
+    # manipulation to the libtt module.
+    @return_focus
+    def punch_in(self, event):
+        badge = self.get_entered_badge()
         dt = datetime.now()
         print(f'Punch In {badge}')
         badges = libtt.punch_in(badge, dt)
@@ -403,6 +422,7 @@ class MainWindow(wx.Frame):
 
     # Buttons to punch out will call this method; we pass off all the data
     # manipulation to the libtt module.
+    @return_focus
     def punch_out(self, event, badge_num=None):
         bni = self.badge_num_input
         badge = bni.GetValue() if badge_num is None else badge_num
@@ -416,10 +436,9 @@ class MainWindow(wx.Frame):
         self.clear_input()
 
     # Adds up all of the time a badge has been punched in.
+    @return_focus
     def check_time_total(self, event):
-        badge = self.badge_num_input.GetValue()
-        badge = badge.strip()
-        badge = self.lookup_alt(libtt.get_badges(), badge)
+        badge = self.get_entered_badge()
         print(f'Check Time {badge}')
         # Create a grid
         punch_data = libtt.read_punches(badge)
@@ -462,6 +481,7 @@ class MainWindow(wx.Frame):
         self.Layout()
         self.Update()
 
+    @return_focus
     def add_user(self, event):
         print('adding user dialog')
         # Create a dialog that has inputs for a badge number, display name,
@@ -503,8 +523,7 @@ class MainWindow(wx.Frame):
 
     def submit_user(self, event, badge_num_input, display_name_input,
                     photo_url_input):
-        badge_num = badge_num_input.GetValue()
-        badge_num = badge_num.strip()
+        badge_num = self.get_entered_badge()
         display_name = display_name_input.GetValue()
         photo_url = photo_url_input.GetValue()
         # Don't allow submit unless a name and number are in
@@ -544,6 +563,7 @@ class MainWindow(wx.Frame):
         print(search_text)
         self.update_find_user_search(search_text)
 
+    @return_focus
     def find_user(self, event):
         self.find_user_badges = libtt.get_badges()
         if len(self.find_user_badges) == 0:
@@ -568,6 +588,7 @@ class MainWindow(wx.Frame):
         self.find_user_dlg.ShowModal()
         self.find_user_dlg.Destroy()
 
+    @return_focus
     def punch_all_out(self, event):
         for badge_num, badge in libtt.get_badges().items():
             if badge['status'] == 'in':
@@ -579,6 +600,7 @@ class MainWindow(wx.Frame):
         store_app_settings()
         self.settings_dlg.EndModal(True)
 
+    @return_focus
     def edit_settings(self, event):
         print("editing settings")
         self.settings_dlg = wx.Dialog(self, title='System Settings')
