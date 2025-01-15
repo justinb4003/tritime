@@ -144,6 +144,9 @@ class MainWindow(wx.Frame):
         for b in [self.in_btn, self.out_btn]:
             b.Disable()
 
+        if _app_settings['allow_all_out'] is False:
+            self.punch_all_out_btn.Disable()
+
         # Create a grid that lets us show everybody punched in
         self.active_badge_sizer = wx.GridSizer(4, 20, 10)
 
@@ -174,8 +177,11 @@ class MainWindow(wx.Frame):
         hbox_system.AddSpacer(spacer_size)
 
         vbox_buttons.Add(hbox_inout)
+        vbox_buttons.AddSpacer(spacer_size)
         vbox_buttons.Add(hbox_usermanage)
+        vbox_buttons.AddSpacer(spacer_size)
         vbox_buttons.Add(hbox_system)
+        vbox_buttons.AddSpacer(spacer_size)
 
         hbox_top = wx.BoxSizer(wx.HORIZONTAL)
         hbox_top.Add(self.clock_display)
