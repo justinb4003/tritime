@@ -14,8 +14,12 @@ import lib.trireport as libtr
 
 from functools import wraps
 from io import BytesIO
-from threading import Thread
+from threading import Thread, Timer
 from datetime import datetime
+
+# Create a custom event type for debounced events
+wxEVT_DEBOUNCED_TEXT = wx.NewEventType()
+EVT_DEBOUNCED_TEXT = wx.PyEventBinder(wxEVT_DEBOUNCED_TEXT, 1)
 
 
 _app_settings: dict[str, any] = {}
@@ -36,6 +40,29 @@ def modifies_settings(func):
         func(*args, **kwargs)
         store_app_settings()
     return wrapper
+
+
+def debounce(wait_time):
+    """
+    Decorator that will debounce a function for the specified amount of time.
+    If the decorated function is called multiple times, only the last call
+    will be executed after the wait_time has elapsed.
+    """
+    def decorator(fn):
+        timer = None
+
+        @wraps(fn)
+        def debounced(*args, **kwargs):
+            nonlocal timer
+
+            if timer is not None:
+                timer.cancel()
+
+            timer = Timer(wait_time, lambda: fn(*args, **kwargs))
+            timer.start()
+
+        return debounced
+    return decorator
 
 
 def get_app_settings():
@@ -88,6 +115,48 @@ def download_image(self, url, width=64, height=64):
         valid_image = False
     return image, valid_image
 
+class DebouncedTextEvent(wx.PyCommandEvent):
+    """Custom event for debounced text changes"""
+    def __init__(self, event_type, id, text=""):
+        super().__init__(event_type, id)
+        self._text = text
+
+    def GetText(self):
+        return self._text
+
+class DebouncedTextCtrl(wx.TextCtrl):
+    """
+    A TextCtrl subclass that provides debounced text change events.
+    Regular EVT_TEXT events fire immediately, while EVT_DEBOUNCED_TEXT
+    events fire after the specified delay with no intermediate input.
+    """
+    def __init__(self, parent, id=wx.ID_ANY, value="", delay=0.5, *args, **kwargs):
+        super().__init__(parent, id, value, *args, **kwargs)
+        self.delay = delay
+        self._timer = None
+
+        # Bind to the regular text event
+        self.Bind(wx.EVT_TEXT, self._on_text)
+
+    def _on_text(self, event):
+        """Handle the text change event with debouncing"""
+        # Cancel any pending timer
+        if self._timer is not None:
+            self._timer.cancel()
+
+        # Create new timer for delayed event
+        self._timer = Timer(self.delay, self._fire_debounced_event)
+        self._timer.start()
+
+        # Allow the regular event to propagate
+        event.Skip()
+
+    def _fire_debounced_event(self):
+        """Fire the custom debounced event"""
+        evt = DebouncedTextEvent(wxEVT_DEBOUNCED_TEXT, self.GetId(), self.GetValue())
+        evt.SetEventObject(self)
+        wx.PostEvent(self, evt)
+
 
 class MainWindow(wx.Frame):
 
@@ -105,11 +174,12 @@ class MainWindow(wx.Frame):
         wx.Frame.__init__(self, parent, id,
                           'TriTime', size=(1024, 800))
         bni_style = wx.TE_PROCESS_ENTER | wx.TE_MULTILINE
-        self.badge_num_input = wx.TextCtrl(self, -1, '',
-                                           style=bni_style)
-        self.badge_num_input.Bind(wx.EVT_TEXT, self.on_badge_num_change)
+        self.badge_num_input = DebouncedTextCtrl(self, -1, '',
+                                                 delay=0.2,
+                                                 style=bni_style)
+        self.badge_num_input.Bind(EVT_DEBOUNCED_TEXT, self.on_badge_num_change)
         self.badge_num_input.Bind(wx.EVT_TEXT_ENTER, self.on_badge_num_enter)
-        self.badge_clear_btn = wx.Button(self, label='Clear', size=(80, 80))
+        self.badge_clear_btn = wx.Button(self, label='Clear', size=(80, 100))
         self.badge_clear_btn.Bind(wx.EVT_BUTTON, self.clear_badge_input)
         self.export_btn = wx.Button(self, label='Export Data')
         self.export_btn.Bind(wx.EVT_BUTTON, self.export_data)
@@ -347,7 +417,7 @@ class MainWindow(wx.Frame):
             if badge_num in badge['alt_keys']:
                 return real_badge_num
         return badge_num
-    
+
     @return_focus
     def clear_badge_input(self, event):
         self.badge_num_input.SetValue('')
@@ -357,10 +427,9 @@ class MainWindow(wx.Frame):
     def on_badge_num_change(self, event):
         self.in_btn.Disable()
         self.out_btn.Disable()
-        badge_num = event.GetString()
+        badge_num = self.get_entered_badge()
         badges = libtt.get_badges()
         valid_badges = badges.keys()
-        badge_num = self.lookup_alt(badges, badge_num)
         print(f'Badge Number: {badge_num}')
         if badge_num in valid_badges:
             badge_data = badges[badge_num]
@@ -435,7 +504,7 @@ class MainWindow(wx.Frame):
     def punch_out(self, event, badge_num=None):
         bni = self.badge_num_input
         badge = bni.GetValue() if badge_num is None else badge_num
-        badge = self.lookup_alt(libtt.get_badges(), badge) 
+        badge = self.lookup_alt(libtt.get_badges(), badge)
         dt = datetime.now()
         print(f'Punch Out {badge}')
         badges = libtt.punch_out(badge, dt)
@@ -486,7 +555,7 @@ class MainWindow(wx.Frame):
 
             check_time_grid.SetCellValue(0, 2,
                                         str(round(total_duration/3600, 2)))
-        
+
             check_time_grid.Show()
             check_time_grid.Layout()
             check_time_grid.Update()
@@ -510,7 +579,7 @@ class MainWindow(wx.Frame):
         badge_input.Bind(wx.EVT_TEXT, badge_change)
         submit_btn = wx.Button(checktime_dlg, label='Close',
                                size=(80, 80))
-        submit_btn.Bind(wx.EVT_BUTTON, 
+        submit_btn.Bind(wx.EVT_BUTTON,
                         lambda event: checktime_dlg.EndModal(True))
         vbox = wx.BoxSizer(wx.VERTICAL)
         vbox.AddSpacer(20)
@@ -519,9 +588,9 @@ class MainWindow(wx.Frame):
         vbox.Add(check_time_grid, flag=wx.EXPAND)
         vbox.AddSpacer(20)
         vbox.Add(submit_btn)
-        
+
         badge_input.SetValue(main_app_badge)
-        
+
 
         # Fit the grid to the size of the window
         checktime_dlg.SetSizerAndFit(vbox)
