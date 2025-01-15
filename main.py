@@ -109,6 +109,8 @@ class MainWindow(wx.Frame):
                                            style=bni_style)
         self.badge_num_input.Bind(wx.EVT_TEXT, self.on_badge_num_change)
         self.badge_num_input.Bind(wx.EVT_TEXT_ENTER, self.on_badge_num_enter)
+        self.badge_clear_btn = wx.Button(self, label='Clear', size=(80, 80))
+        self.badge_clear_btn.Bind(wx.EVT_BUTTON, self.clear_badge_input)
         self.export_btn = wx.Button(self, label='Export Data')
         self.export_btn.Bind(wx.EVT_BUTTON, self.export_data)
         self.greeting_label = wx.StaticText(self, -1, 'Welcome to TriTime')
@@ -192,10 +194,15 @@ class MainWindow(wx.Frame):
         hbox_buttons_checkgrid.Add(vbox_buttons)
         hbox_buttons_checkgrid.Add(self.active_badge_sizer)
 
+        hbox_badgde_input = wx.BoxSizer(wx.HORIZONTAL)
+        hbox_badgde_input.Add(self.badge_num_input, 1, wx.EXPAND)
+        hbox_badgde_input.AddSpacer(spacer_size)
+        hbox_badgde_input.Add(self.badge_clear_btn)
+
         vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_top, 1, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(self.badge_num_input, 0, wx.EXPAND)
+        vbox.Add(hbox_badgde_input, 1, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
@@ -310,9 +317,10 @@ class MainWindow(wx.Frame):
         img = wx.Bitmap(img)
         bmp = wx.StaticBitmap(parent, -1, img)
         vbox = wx.BoxSizer(wx.VERTICAL)
-        btn = wx.Button(parent, label=badge_name)
+        btn = wx.Button(parent, label=badge_name, size=(-1, 80))
         btn.Bind(wx.EVT_BUTTON, lambda event: bind_method(event, badge_num))
         vbox.Add(bmp, flag=wx.CENTER)
+        vbox.AddSpacer(10)
         vbox.Add(btn, flag=wx.CENTER)
         return vbox
 
@@ -340,6 +348,10 @@ class MainWindow(wx.Frame):
             if badge_num in badge['alt_keys']:
                 return real_badge_num
         return badge_num
+    
+    @return_focus
+    def clear_badge_input(self, event):
+        self.badge_num_input.SetValue('')
 
     # This method fires whenever the badge number input changes; it will
     # update the greeting label and enable/disable the buttons as needed.
@@ -496,6 +508,7 @@ class MainWindow(wx.Frame):
         check_time_grid.SetColLabelValue(2, 'Hours')
         check_time_grid.HideRowLabels()
 
+        main_app_badge = self.get_entered_badge()
         badge_input = wx.TextCtrl(checktime_dlg, size=(200, -1))
         badge_input.Bind(wx.EVT_TEXT, badge_change)
         submit_btn = wx.Button(checktime_dlg, label='Close',
@@ -509,6 +522,8 @@ class MainWindow(wx.Frame):
         vbox.Add(check_time_grid, flag=wx.EXPAND)
         vbox.AddSpacer(20)
         vbox.Add(submit_btn)
+        
+        badge_input.SetValue(main_app_badge)
         
 
         # Fit the grid to the size of the window
@@ -589,9 +604,10 @@ class MainWindow(wx.Frame):
             if search_text in b['display_name'].lower():
                 matches[num] = b
                 vbox = self.create_badge_card(num,
-                                              self.find_user_dlg,
+                                              self.scrolled_window,
                                               self.set_badge_input)
                 self.find_user_badge_sizer.Add(vbox)
+                self.find_user_badge_sizer.AddSpacer(10)
         print(matches)
         self.find_user_dlg.Fit()
         self.find_user_dlg.Layout()
@@ -610,15 +626,21 @@ class MainWindow(wx.Frame):
                           'Error', wx.OK | wx.ICON_ERROR)
             return
         self.find_user_dlg = wx.Dialog(self, title='Find User')
+
         search_input = wx.TextCtrl(self.find_user_dlg, size=(200, -1))
         search_input.Bind(wx.EVT_TEXT, self.find_user_input_change)
-        self.find_user_badge_sizer = wx.GridSizer(4, 20, 10)
+        self.scrolled_window = wx.ScrolledWindow(self.find_user_dlg)
+        self.scrolled_window.SetScrollRate(10, 10)
+        self.scrolled_window.SetMinSize((800, 600))
+        self.find_user_badge_sizer = wx.WrapSizer(wx.HORIZONTAL)
+        self.scrolled_window.SetSizer(self.find_user_badge_sizer)
 
         vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.SetMinSize((600, -1))
         vbox.AddSpacer(20)
         vbox.Add(search_input)
         vbox.AddSpacer(20)
-        vbox.Add(self.find_user_badge_sizer, flag=wx.EXPAND)
+        vbox.Add(self.scrolled_window, flag=wx.EXPAND)
         vbox.AddSpacer(20)
         self.update_find_user_search('')
         self.find_user_dlg.SetSizerAndFit(vbox)
