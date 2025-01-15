@@ -336,7 +336,6 @@ class MainWindow(wx.Frame):
         self.badge_num_input.SetValue('')
         self.in_btn.Disable()
         self.out_btn.Disable()
-        self.check_time.Disable()
         self.badge_num_input.SetFocus()
 
     # Users can be identified by more than one code; this method will look up
@@ -358,7 +357,6 @@ class MainWindow(wx.Frame):
     def on_badge_num_change(self, event):
         self.in_btn.Disable()
         self.out_btn.Disable()
-        self.check_time.Disable()
         badge_num = event.GetString()
         badges = libtt.get_badges()
         valid_badges = badges.keys()
@@ -374,7 +372,6 @@ class MainWindow(wx.Frame):
                 self.in_btn.Enable()
             if status != 'out':
                 self.out_btn.Enable()
-            self.check_time.Enable()
         else:
             self.greeting_label.SetLabel(
                 'Scan badge'
