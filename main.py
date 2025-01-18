@@ -105,13 +105,10 @@ def download_image(self, url, width=64, height=64):
             image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
             valid_image = True
         else:
-            print('img not ok')
             image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
             valid_image = False
     except:  # noqa
-        print('exception loading unknown png')
         image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
-        print('exception loaded')
         valid_image = False
     return image, valid_image
 
@@ -298,6 +295,11 @@ class MainWindow(wx.Frame):
 
         self.update_active_badges()
         self.badge_num_input.SetFocus()
+        self.Bind(wx.EVT_LEFT_DOWN, self.on_panel_click)
+
+    @return_focus
+    def on_panel_click(self, event):
+        return
 
     def on_app_shutdown(self, event):
         self.clock_thread_run = False
@@ -427,7 +429,9 @@ class MainWindow(wx.Frame):
     def on_badge_num_change(self, event):
         self.in_btn.Disable()
         self.out_btn.Disable()
-        badge_num = self.get_entered_badge()
+        badge_num = self.get_entered_badge(
+            badge=event.GetString().strip()
+        )
         badges = libtt.get_badges()
         valid_badges = badges.keys()
         print(f'Badge Number: {badge_num}')
@@ -453,8 +457,9 @@ class MainWindow(wx.Frame):
     # The use case there is putting the JSON data into a QR code that can
     # reconfig the whole system in a jiffy!
     @return_focus
-    def on_badge_num_enter(self, event):
-        badge_num = self.get_entered_badge()
+    def on_badge_num_enter(self, event, badge_num=None):
+        if badge_num is None:
+            badge_num = self.get_entered_badge()
 
         if badge_num == 'debug':
             import wx.lib.inspection
@@ -480,8 +485,9 @@ class MainWindow(wx.Frame):
             elif badge_data['status'] == 'out':
                 self.punch_in(event)
 
-    def get_entered_badge(self) -> str:
-        badge = self.badge_num_input.GetValue()
+    def get_entered_badge(self, badge=None) -> str:
+        if badge is None:
+            badge = self.badge_num_input.GetValue()
         badge = badge.strip()
         badge = self.lookup_alt(libtt.get_badges(), badge)
         return badge
@@ -502,6 +508,7 @@ class MainWindow(wx.Frame):
     # manipulation to the libtt module.
     @return_focus
     def punch_out(self, event, badge_num=None):
+        badge_num = self.get_entered_badge(badge_num) if badge_num is None else badge_num
         bni = self.badge_num_input
         badge = bni.GetValue() if badge_num is None else badge_num
         badge = self.lookup_alt(libtt.get_badges(), badge)
@@ -659,9 +666,15 @@ class MainWindow(wx.Frame):
         self.settings_dlg.EndModal(True)
 
     def set_badge_input(self, event, badge_num):
-        self.badge_num_input.SetValue(badge_num)
+        self.badge_num_input.ChangeValue(badge_num)
         self.badge_num_input.SetFocus()
         self.find_user_dlg.EndModal(True)
+        # If we want to auto-punch after people are selected
+        # in the search window we want to execute this.
+        if True:
+            evt = wx.CommandEvent(wx.EVT_TEXT_ENTER.typeId)
+            evt.SetEventObject(self.badge_num_input)
+            wx.PostEvent(self.badge_num_input, evt)
 
     def update_find_user_search(self, search_text):
         matches = {}
@@ -674,7 +687,6 @@ class MainWindow(wx.Frame):
                                               self.set_badge_input)
                 self.find_user_badge_sizer.Add(vbox)
                 self.find_user_badge_sizer.AddSpacer(10)
-        print(matches)
         self.find_user_dlg.Fit()
         self.find_user_dlg.Layout()
         self.find_user_dlg.Update()
