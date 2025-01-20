@@ -33,6 +33,8 @@ def read_punches(badge: str):
             punch_data = json.loads(f.read())
     else:
         punch_data = []
+    # Sort by the ts_in property
+    punch_data = sorted(punch_data, key=lambda x: x['ts_in'])
     return punch_data
 
 
@@ -42,17 +44,31 @@ def write_punches(badge: str, punch_data: list):
     with open(datafile, 'w') as f:
         f.write(json.dumps(punch_data, indent=4, sort_keys=True))
 
+def fix_badges():
+    badges = get_badges()
+    for badge in badges.keys():
+        punch_data = read_punches(badge)
+        badges = update_badge_status(badge, badges, punch_data)
+    store_badges(badges)
+
+def update_badge_status(badge: str, badges: list, punch_data: list, save_data=True):
+    status = 'out'
+    # If the last punch doesn't have a ts_out, then the badge is in
+    if len(punch_data) > 0 and 'ts_out' not in punch_data[-1]:
+        status = 'in'
+    badges[badge]['status'] = status
+    if save_data is True:
+        store_badges(badges)
+    return badges
 
 def punch_in(badge: str, dt: datetime):
     json_dt = dt.strftime(json_dt_fmt)
     punch_data = read_punches(badge)
     punch_data.append({'ts_in': json_dt})
     write_punches(badge, punch_data)
-
     # Change status
     badges = get_badges()
-    badges[badge]['status'] = 'in'
-    store_badges(badges)
+    badges = update_badge_status(badge, badges, punch_data)
     return badges
 
 
@@ -64,8 +80,8 @@ def punch_out(badge: str, dt: datetime):
     lrec['ts_out'] = json_dt
     write_punches(badge, punch_data)
     badges = get_badges()
-    badges[badge]['status'] = 'out'
-    store_badges(badges)
+    badges = update_badge_status(badge, badges, punch_data)
+    print(f'punch out modify status {badge}')
     return badges
 
 

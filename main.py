@@ -217,7 +217,11 @@ class MainWindow(wx.Frame):
             self.punch_all_out_btn.Disable()
 
         # Create a grid that lets us show everybody punched in
-        self.active_badge_sizer = wx.GridSizer(4, 20, 10)
+        self.active_badge_sizer = wx.WrapSizer(wx.HORIZONTAL)
+        self.badge_scroller = wx.ScrolledWindow(self)
+        self.badge_scroller.SetScrollRate(10, 10)
+        self.badge_scroller.SetMinSize((800, 600))
+        self.badge_scroller.SetSizer(self.active_badge_sizer)
 
         spacer_size = 20
         # This lets us put a space to the left of everything by putting our
@@ -257,9 +261,10 @@ class MainWindow(wx.Frame):
         hbox_top.AddStretchSpacer(20)
         hbox_top.Add(self.export_btn)
 
+
         hbox_buttons_checkgrid = wx.BoxSizer(wx.HORIZONTAL)
         hbox_buttons_checkgrid.Add(vbox_buttons)
-        hbox_buttons_checkgrid.Add(self.active_badge_sizer)
+        hbox_buttons_checkgrid.Add(self.badge_scroller)
 
         hbox_badgde_input = wx.BoxSizer(wx.HORIZONTAL)
         hbox_badgde_input.Add(self.badge_num_input, 1, wx.EXPAND)
@@ -398,8 +403,10 @@ class MainWindow(wx.Frame):
 
     # Draws an individual badge on the grid with a button to punch them out
     def add_badge_to_grid(self, badge_num):
-        vbox = self.create_badge_card(badge_num)
-        self.active_badge_sizer.Add(vbox)
+        vbox = self.create_badge_card(badge_num,
+                                        self.badge_scroller,
+                                        self.punch_out)
+        self.active_badge_sizer.Add(vbox, 0, wx.ALL, border=10)
         self.Layout()
         self.Update()
 
@@ -434,7 +441,6 @@ class MainWindow(wx.Frame):
         )
         badges = libtt.get_badges()
         valid_badges = badges.keys()
-        print(f'Badge Number: {badge_num}')
         if badge_num in valid_badges:
             badge_data = badges[badge_num]
             self.greeting_label.SetLabel(
@@ -460,6 +466,10 @@ class MainWindow(wx.Frame):
     def on_badge_num_enter(self, event, badge_num=None):
         if badge_num is None:
             badge_num = self.get_entered_badge()
+
+        if badge_num == 'fixbadges':
+            libtt.fix_badges()
+            return
 
         if badge_num == 'debug':
             import wx.lib.inspection
@@ -498,7 +508,6 @@ class MainWindow(wx.Frame):
     def punch_in(self, event):
         badge = self.get_entered_badge()
         dt = datetime.now()
-        print(f'Punch In {badge}')
         badges = libtt.punch_in(badge, dt)
         libtt.store_badges(badges)
         self.add_badge_to_grid(badge)
@@ -513,7 +522,6 @@ class MainWindow(wx.Frame):
         badge = bni.GetValue() if badge_num is None else badge_num
         badge = self.lookup_alt(libtt.get_badges(), badge)
         dt = datetime.now()
-        print(f'Punch Out {badge}')
         badges = libtt.punch_out(badge, dt)
         libtt.store_badges(badges)
         libtt.tabulate_badge(badge)
@@ -529,7 +537,6 @@ class MainWindow(wx.Frame):
         def badge_change(event):
             badge = event.GetString().strip()
             badge = self.lookup_alt(libtt.get_badges(), badge)
-            print(f'Check Time {badge}')
             # Create a grid
             punch_data = libtt.read_punches(badge)
             punch_data.reverse()
@@ -610,7 +617,6 @@ class MainWindow(wx.Frame):
 
     @return_focus
     def add_user(self, event):
-        print('adding user dialog')
         # Create a dialog that has inputs for a badge number, display name,
         # and photo URL.  When the dialog is submitted, add the user to the
         # database and update the active badges grid.
@@ -685,15 +691,13 @@ class MainWindow(wx.Frame):
                 vbox = self.create_badge_card(num,
                                               self.scrolled_window,
                                               self.set_badge_input)
-                self.find_user_badge_sizer.Add(vbox)
-                self.find_user_badge_sizer.AddSpacer(10)
+                self.find_user_badge_sizer.Add(vbox, 0, wx.ALL, border=10)
         self.find_user_dlg.Fit()
         self.find_user_dlg.Layout()
         self.find_user_dlg.Update()
 
     def find_user_input_change(self, event):
         search_text = event.GetString().lower()
-        print(search_text)
         self.update_find_user_search(search_text)
 
     @return_focus
@@ -741,7 +745,6 @@ class MainWindow(wx.Frame):
 
     @return_focus
     def edit_settings(self, event):
-        print("editing settings")
         self.settings_dlg = wx.Dialog(self, title='System Settings')
         allow_all_out_chk = wx.CheckBox(self.settings_dlg,
                                         label='Allow All Out')
