@@ -170,6 +170,7 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, id):
         wx.Frame.__init__(self, parent, id,
                           'TriTime', size=(1024, 800))
+        self.Maximize(True)
         bni_style = wx.TE_PROCESS_ENTER | wx.TE_MULTILINE
         self.badge_num_input = DebouncedTextCtrl(self, -1, '',
                                                  delay=0.2,
@@ -289,7 +290,6 @@ class MainWindow(wx.Frame):
         self.outerhbox = outerhbox
         # Add sizer to panel
         self.SetSizerAndFit(outerhbox)
-        # self.ShowFullScreen(True)
         self.Layout()
         self.Update()
 
