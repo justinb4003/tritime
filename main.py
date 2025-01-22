@@ -264,7 +264,7 @@ class MainWindow(wx.Frame):
 
         hbox_buttons_checkgrid = wx.BoxSizer(wx.HORIZONTAL)
         hbox_buttons_checkgrid.Add(vbox_buttons)
-        hbox_buttons_checkgrid.Add(self.badge_scroller)
+        hbox_buttons_checkgrid.Add(self.badge_scroller, 1, wx.EXPAND)
 
         hbox_badgde_input = wx.BoxSizer(wx.HORIZONTAL)
         hbox_badgde_input.Add(self.badge_num_input, 1, wx.EXPAND)
@@ -278,7 +278,7 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(hbox_buttons_checkgrid, wx.EXPAND)
+        vbox.Add(hbox_buttons_checkgrid, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
 
         # TODO: Add check time grid back somewhere
@@ -286,14 +286,14 @@ class MainWindow(wx.Frame):
         outerhbox.AddSpacer(spacer_size)
         outerhbox.Add(vbox, wx.EXPAND)
         outerhbox.AddSpacer(spacer_size)
+        self.outerhbox = outerhbox
         # Add sizer to panel
-        self.SetSizer(outerhbox)
+        self.SetSizerAndFit(outerhbox)
         # self.ShowFullScreen(True)
         self.Layout()
         self.Update()
 
         self.Bind(wx.EVT_CLOSE, self.on_app_shutdown)
-
         self.clock_thread_run = True
         self.clock_thread = Thread(target=self.update_clock)
         self.clock_thread.start()
@@ -362,6 +362,7 @@ class MainWindow(wx.Frame):
 
     # Draw every punched in badge on the grid with a button to punch them out
     def update_active_badges(self):
+        self.Freeze()
         self.clear_active_badges()
         if _app_settings['show_active_badges'] is False:
             return
@@ -369,6 +370,7 @@ class MainWindow(wx.Frame):
         for bnum, badge in badges.items():
             if badge['status'] == 'in':
                 self.add_badge_to_grid(bnum)
+        self.Thaw()
 
     def create_badge_card(self, badge_num, parent=None, bind_method=None):
         parent = self if parent is None else parent
@@ -722,7 +724,7 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(20)
         vbox.Add(search_input)
         vbox.AddSpacer(20)
-        vbox.Add(self.scrolled_window, flag=wx.EXPAND)
+        vbox.Add(self.scrolled_window, flag=wx.EXPAND, border=10)
         vbox.AddSpacer(20)
         self.update_find_user_search('')
         self.find_user_dlg.SetSizerAndFit(vbox)
