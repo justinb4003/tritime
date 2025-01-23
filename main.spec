@@ -17,16 +17,30 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
+
+# Define the splash screen target
+splash = Splash(
+    'tritime-splash.png',    # Path to your splash screen image (must be in BMP or PNG format)
+    binaries=a.binaries,   # Include binaries from the analysis step
+    datas=a.datas,         # Include data files from the analysis step
+    text_pos=None,         # No text overlay (optional, can be set as desired)
+    text_size=12,          # Optional text size
+    text_color='black',    # Optional text color
+)
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
     a.scripts,
+    splash,                # Add the splash target
+    splash.binaries,       # Include splash binaries
     a.binaries,
     a.zipfiles,
     a.datas,
     [],
     name='tritime',
+    splash='tritime-splash.bmp',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

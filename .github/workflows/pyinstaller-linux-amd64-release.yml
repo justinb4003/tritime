@@ -3,11 +3,11 @@ name: Linux amd64 Release Build
 on:
   push:
     branches:
-      - release  # Trigger the workflow on push events to the main branch
+      - release  # Trigger the workflow on push events to the release branch
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # You can specify other OS like windows-latest if needed
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
@@ -28,16 +28,16 @@ jobs:
         run: pip install pyinstaller
 
       - name: Build Executable
-        run: pyinstaller --clean main.spec
+        run: pyinstaller --clean main.spec --distpath ./dist/linux_amd64/
 
       - name: Move in support data files for runtime
-        run: cp unknown_badge.png dist/
+        run: cp unknown_badge.png dist/linux_amd64/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tritime-linux-amd64
-          path: dist/**
+          path: dist/linux_amd64/
 
       - name: Cache Build Output
         uses: actions/cache@v3
