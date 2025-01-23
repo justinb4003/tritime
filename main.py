@@ -307,6 +307,9 @@ class MainWindow(wx.Frame):
         return
 
     def on_app_shutdown(self, event):
+        self.shutdown()
+
+    def shutdown(self):
         self.clock_thread_run = False
         self.clock_thread.join()
         self.Destroy()
@@ -468,6 +471,9 @@ class MainWindow(wx.Frame):
     def on_badge_num_enter(self, event, badge_num=None):
         if badge_num is None:
             badge_num = self.get_entered_badge()
+
+        if badge_num == 'quit':
+            self.shutdown()
 
         if badge_num == 'fixbadges':
             libtt.fix_badges()
