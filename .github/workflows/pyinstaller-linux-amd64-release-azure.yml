@@ -3,7 +3,7 @@ name: Linux amd64 Release Build - Azure Enabled
 on:
   push:
     branches:
-      - release-azure
+      - azure-release
 
 jobs:
   build:
