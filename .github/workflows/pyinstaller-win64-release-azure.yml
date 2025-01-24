@@ -1,4 +1,4 @@
-name: Windows x64 Release Build
+name: Windows x64 Release Build - Azure Enabled
 
 on:
   push:
