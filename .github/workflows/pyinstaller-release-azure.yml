@@ -1,0 +1,138 @@
+name: Create Release - Azure Enabled
+
+on:
+  push:
+    branches: [ azure-release ]
+  pull_request:
+    branches: [ azure-release ]
+
+jobs:
+  release:
+    env:
+      GH_TOKEN: ${{ github.token }}
+    runs-on: ubuntu-latest  # You can specify other OS like windows-latest if needed
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get the latest tag
+        id: get_tag
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0)
+          echo "Latest tag: $latest_tag"
+          # Extract version number (assuming tags follow semantic versioning)
+          if [ -z "$latest_tag" ]; then
+            echo "::set-output name=new_tag::v1.0.0"
+          else
+            major=$(echo $latest_tag | cut -d. -f1 | sed 's/v//')
+            minor=$(echo $latest_tag | cut -d. -f2)
+            patch=$(echo $latest_tag | cut -d. -f3)
+            new_patch=$((patch + 1))
+            new_tag="v$major.$minor.$new_patch"
+            echo "::set-output name=new_tag::$new_tag"
+          fi
+        shell: bash
+
+      - name: Wait for Caches to Appear
+        id: wait-for-cache
+        run: |
+          max_attempts=40  # Maximum number of attempts
+          attempt=1
+          success=false
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt: Checking for all caches..."
+
+            # Check for all caches
+            windows_cache=$(gh cache list --json key --jq ".[] | select(.key == \"windows-app-build-${{ github.ref_name }}-${{ github.sha }}\")")
+            linux_cache=$(gh cache list --json key --jq ".[] | select(.key == \"linux-amd64-app-build-${{ github.ref_name }}-${{ github.sha }}\")")
+
+            if [ -n "$windows_cache" ]; then
+              echo "Windows cache found."
+            fi
+            if [ -n "$linux_cache" ]; then
+              echo "Linux amd64 cache found."
+            fi
+
+            if [ -n "$windows_cache" ] && [ -n "$linux_cache" ]; then
+              echo "All caches found! Proceeding with build."
+              success=true
+              break
+            else
+              echo "One or more caches not found. Retrying in 30 seconds..."
+              sleep 30
+            fi
+
+            attempt=$(( attempt + 1 ))
+          done
+
+          if [ "$success" = false ]; then
+            echo "Caches not available after $max_attempts attempts. Exiting..."
+            exit 1
+          fi
+
+
+      - name: Restore Windows x64 From Cache
+        uses: actions/cache@v3
+        with:
+          path: ./dist/windows/
+          key: windows-app-build-azure-${{ github.ref_name }}-${{ github.sha }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+
+      - name: Restore Linux amd64 From Cache
+        uses: actions/cache@v3
+        with:
+          path: ./dist/linux_amd64/
+          key: linux-amd64-app-build-azure-${{ github.ref_name }}-${{ github.sha }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+
+      - name: Verify Restored Binaries
+        run: |
+          echo "Listing files in ./:"
+          ls -l ./
+          ls -l ./dist/linux_amd64/
+          ls -l ./dist/windows/
+
+      - name: Create Windows ZIP archive
+        run: |
+          zip -jr ./tritime-win64.zip ./dist/windows/
+
+      - name: Create Linux amd64 archive
+        run: |
+          cd dist/linux_amd64/ && tar -czvf ../../tritime-linux-amd64.tar.gz  ./
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_tag.outputs.new_tag }}
+          release_name: Tritime (Azure) ${{ steps.get_tag.outputs.new_tag }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Windows Artifact to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./tritime-win64.zip
+          asset_name: tritime-win64.zip
+          asset_content_type: application/zip
+
+      - name: Upload Linux amd64 Artifact to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./tritime-linux-amd64.tar.gz
+          asset_name: tritime-linux-amd64.tar.gz
+          asset_content_type: application/tgz
+
