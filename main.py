@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#i!/usr/bin/env python3
 
 # TODO: Finish settings dialog next
 
@@ -13,6 +13,7 @@ import lib.tritime as libtt
 import lib.trireport as libtr
 import lib.libazure as libaz
 
+from lib.libazure import TriTimeEvent
 from functools import wraps
 from io import BytesIO
 from threading import Thread, Timer
@@ -64,6 +65,9 @@ def debounce(wait_time):
 
         return debounced
     return decorator
+
+def system_id() -> str:
+    return os.environ.get('SYSTEM_ID', '')
 
 
 def get_app_settings():
@@ -311,6 +315,8 @@ class MainWindow(wx.Frame):
         self.shutdown()
 
     def shutdown(self):
+        if azure_enabled():
+            libaz.stop()
         self.clock_thread_run = False
         self.clock_thread.join()
         self.Destroy()
@@ -518,6 +524,15 @@ class MainWindow(wx.Frame):
         badge = self.get_entered_badge()
         dt = datetime.now()
         badges = libtt.punch_in(badge, dt)
+        if azure_enabled():
+            msg = TriTimeEvent(
+                system_id=system_id(),
+                badge_num=badge,
+                event_type='punch_in',
+                ts=dt,
+                details={}
+            )
+            libaz.message_queue.put(msg)
         libtt.store_badges(badges)
         self.add_badge_to_grid(badge)
         self.clear_input()
@@ -534,6 +549,15 @@ class MainWindow(wx.Frame):
         badges = libtt.punch_out(badge, dt)
         libtt.store_badges(badges)
         libtt.tabulate_badge(badge)
+        if azure_enabled():
+            msg = TriTimeEvent(
+                system_id=system_id(),
+                badge_num=badge_num,
+                event_type='punch_out',
+                ts=dt,
+                details={}
+            )
+            libaz.message_queue.put(msg)
         self.update_active_badges()
         self.clear_input()
 
@@ -711,6 +735,7 @@ class MainWindow(wx.Frame):
 
     @return_focus
     def find_user(self, event):
+        self.update_active_badges()
         self.find_user_badges = libtt.get_badges()
         if len(self.find_user_badges) == 0:
             wx.MessageBox('There are no users in the system.',
@@ -848,6 +873,20 @@ class MainWindow(wx.Frame):
         self.settings_dlg.Destroy()
 
 
+def azure_enabled() -> bool:
+    v = os.environ.get('AZURE_ENABLED', 'false')
+    return v.lower() == 'true'
+
+def azure_message_handler(frame: MainWindow, message: TriTimeEvent) -> None:
+    # message: TriTimeEvent = TriTimeEvent.from_dict(payload)
+    if message.event_type == 'punch_in':
+        badges = libtt.punch_in(message.badge_num, message.ts)
+        libtt.store_badges(badges)
+    elif message.event_type == 'punch_out':
+        badges = libtt.punch_out(message.badge_num, message.ts)
+        libtt.store_badges(badges)
+        libtt.tabulate_badge(message.badge_num)
+    wx.CallAfter(frame.update_active_badges)
 
 # Here's how we fire up the wxPython app
 if __name__ == '__main__':
@@ -861,5 +900,7 @@ if __name__ == '__main__':
         store_app_settings()
     app = wx.App()
     frame = MainWindow(parent=None, id=-1)
+    if azure_enabled():
+        libaz.start(lambda payload: azure_message_handler(frame, payload))
     frame.Show()
     app.MainLoop()
