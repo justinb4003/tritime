@@ -225,6 +225,7 @@ class MainWindow(wx.Frame):
         # Create a grid that lets us show everybody punched in
         self.active_badge_sizer = wx.WrapSizer(wx.HORIZONTAL)
         self.badge_scroller = wx.ScrolledWindow(self)
+        self.badge_scroller.Bind(wx.EVT_LEFT_DOWN, self.on_panel_click)
         self.badge_scroller.SetScrollRate(10, 10)
         self.badge_scroller.SetMinSize((800, 600))
         self.badge_scroller.SetSizer(self.active_badge_sizer)
