@@ -46,8 +46,8 @@ jobs:
             echo "Attempt $attempt: Checking for all caches..."
 
             # Check for all caches
-            windows_cache=$(gh cache list --json key --jq ".[] | select(.key == \"windows-app-build-${{ github.ref_name }}-${{ github.sha }}\")")
-            linux_cache=$(gh cache list --json key --jq ".[] | select(.key == \"linux-amd64-app-build-${{ github.ref_name }}-${{ github.sha }}\")")
+            windows_cache=$(gh cache list --json key --jq ".[] | select(.key == \"windows-app-build-azure-${{ github.ref_name }}-${{ github.sha }}\")")
+            linux_cache=$(gh cache list --json key --jq ".[] | select(.key == \"linux-amd64-app-build-azure-${{ github.ref_name }}-${{ github.sha }}\")")
 
             if [ -n "$windows_cache" ]; then
               echo "Windows cache found."
