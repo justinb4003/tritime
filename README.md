@@ -76,15 +76,3 @@ the ```--system-site-pakages``` in the creation of the virtual enviornment.
 ### Run the app
 
 ```python main.py```
-
-## CI/CD (Automated builds and releases)
-
-In the ```.github/workflows``` folder are Github Actions definitions that will
-build and release the project when checkins occur. Changes comitted to the
-```main``` branch will execute a build to verify it hasn't broken. Changes
-comitted to the ```release``` branch will execute a build, tag the code with
-an automatic version number, and create a Github release.
-
-They  use ```pyinstaller``` to create a single executable that has a Python
-interpreter built into it. Currently only Linux amd64, arm64 and Windows x64 builds are
-created. It might be possible to do an OS X build but I haven't gotten around to it. I'd also like the arm64 build to be faster; it's like 30 minutes now.
