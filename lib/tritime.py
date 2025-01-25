@@ -5,6 +5,7 @@ from datetime import datetime
 
 json_dt_fmt = '%Y-%m-%d %H:%M:%S'
 
+__data_dir = 'data'
 
 def hash_badge_data(punches: list):
     data_str = json.dumps(punches)
@@ -13,7 +14,7 @@ def hash_badge_data(punches: list):
 
 
 def get_badges():
-    local_filename = 'badges.json'
+    local_filename = f'{__data_dir}/badges.json'
     if not os.path.exists(local_filename):
         with open(local_filename, 'w') as f:
             f.write(json.dumps({}))
@@ -22,12 +23,12 @@ def get_badges():
 
 
 def store_badges(data: dict):
-    with open('badges.json', 'w') as f:
+    with open(f'{__data_dir}/badges.json', 'w') as f:
         f.write(json.dumps(data, indent=4, sort_keys=True))
 
 
 def read_punches(badge: str):
-    datafile = f'punch_data_{badge}.json'
+    datafile = f'{__data_dir}/punch_data_{badge}.json'
     if os.path.exists(datafile):
         with open(datafile, 'r') as f:
             punch_data = json.loads(f.read())
@@ -40,7 +41,7 @@ def read_punches(badge: str):
 
 def write_punches(badge: str, punch_data: list):
     punch_data = sorted(punch_data, key=lambda x: x['ts_in'])
-    datafile = f'punch_data_{badge}.json'
+    datafile = f'{__data_dir}/punch_data_{badge}.json'
     with open(datafile, 'w') as f:
         f.write(json.dumps(punch_data, indent=4, sort_keys=True))
 
