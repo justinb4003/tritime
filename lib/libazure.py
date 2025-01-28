@@ -19,10 +19,25 @@ class TriTimeEvent:
    system_id: str
    badge_num: str
    event_type: str
-   ts: datetime = field(
-        metadata={"encoder": lambda x: x.isoformat()}
-    )
+   ts: datetime
    details: Any
+
+   def to_json(self):
+       return json.dumps({
+           'system_id': self.system_id,
+           'badge_num': self.badge_num,
+           'event_type': self.event_type,
+           'ts': self.ts.isoformat(),
+           'details': self.details
+       })
+
+   @classmethod
+   def json_serializer(clazz, obj):
+       if isinstance(obj, datetime):
+           return obj.isoformat()
+       if isinstance(obj, TriTimeEvent):
+           return asdict(obj)
+       raise TypeError("Type not serializable")
 
    @classmethod
    def from_json(clazz, json_str):
@@ -92,22 +107,22 @@ def receive_subscription_messages(handler: Callable) -> None:
                 try:
                     messages = receiver.receive_messages(max_message_count=10, max_wait_time=5)
                     for msg in messages:
-                        try:
-                            # json_str = msg.body.decode('utf-8')
-                            json_str = b''.join(msg.body).decode('utf-8')
-                            obj: TriTimeEvent = TriTimeEvent.from_json(json_str)
-                            # Skip processing our own messages
-                            # And while this can be configured in Azure, it's a
-                            # good idea to have a backup check
-                            if obj.system_id != system_id():
-                                handler(obj)
-                            receiver.complete_message(msg)
-                        except Exception as e:
-                            logger.error(f"Error processing message: {e}")
-                            receiver.abandon_message(msg)
-                            raise e
+                        print('msg received from queue')
+                        # json_str = msg.body.decode('utf-8')
+                        json_str = b''.join(msg.body).decode('utf-8')
+                        print(f"received json_str: {json_str}")
+                        obj: TriTimeEvent = TriTimeEvent.from_json(json_str)
+                        # Skip processing our own messages
+                        # And while this can be configured in Azure, it's a
+                        # good idea to have a backup check
+                        if obj.system_id != system_id():
+                            print('processing the message')
+                            handler(obj)
+                        print('marking message completed in queu')
+                        receiver.complete_message(msg)
                 except Exception as e:
                     logger.error(f"Error receiving messages: {e}")
+                    raise e
 
 def publish_outgoing_messages() -> None:
     config = get_config()
@@ -122,7 +137,8 @@ def publish_outgoing_messages() -> None:
                         continue
                     message: TriTimeEvent = message_queue.get(timeout=1)
                     print(f"jsonning message: {message}")
-                    json_str = message
+                    json_str = json.dumps(message, default=TriTimeEvent.json_serializer)
+                    print(f"sending json_str: {json_str}")
                     msg = ServiceBusMessage(json_str)
                     sender.send_messages(msg)
                 except Exception as e:
@@ -169,7 +185,7 @@ def publish_data() -> None:
         ts=datetime.now(),
         details=badges,
     )
-    send_message(message)
+    queue_message(message)
     for num in badges.keys():
         pd = tritime.read_punches(num)
         message = TriTimeEvent(
@@ -179,10 +195,9 @@ def publish_data() -> None:
             ts=datetime.now(),
             details=pd,
         )
-        send_message(message)
+        queue_message(message)
 
 
-def send_message(message: TriTimeEvent) -> None:
+def queue_message(message: TriTimeEvent) -> None:
     """Add message to the outgoing queue."""
-    payload = json.dumps(message, sort_keys=True, indent=4, cls=TriTimeEventEncoder)
-    message_queue.put(payload)
+    message_queue.put(message)

@@ -4,6 +4,7 @@
 
 import os
 import wx
+import sys
 import wx.adv
 import json
 import time
@@ -173,9 +174,11 @@ class MainWindow(wx.Frame):
     # Set up the main window for the application; this is where most controls
     # get laid out.
     def __init__(self, parent, id):
+        sysid = system_id()
         wx.Frame.__init__(self, parent, id,
-                          'TriTime', size=(1024, 800))
-        self.Maximize(True)
+                          f'TriTime ({sysid})', size=(1024, 800))
+        if hasattr(sys, 'frozen'):
+            self.Maximize(True)
         bni_style = wx.TE_PROCESS_ENTER | wx.TE_MULTILINE
         self.badge_num_input = DebouncedTextCtrl(self, -1, '',
                                                  delay=0.2,
@@ -227,7 +230,7 @@ class MainWindow(wx.Frame):
         self.badge_scroller = wx.ScrolledWindow(self)
         self.badge_scroller.Bind(wx.EVT_LEFT_DOWN, self.on_panel_click)
         self.badge_scroller.SetScrollRate(10, 10)
-        self.badge_scroller.SetMinSize((800, 600))
+        self.badge_scroller.SetMinSize((600, 300))
         self.badge_scroller.SetSizer(self.active_badge_sizer)
 
         spacer_size = 20
@@ -477,6 +480,7 @@ class MainWindow(wx.Frame):
     # reconfig the whole system in a jiffy!
     @return_focus
     def on_badge_num_enter(self, event, badge_num=None):
+        print('enter event handler hit')
         if badge_num is None:
             badge_num = self.get_entered_badge()
 
@@ -894,7 +898,7 @@ def azure_message_handler(frame: MainWindow, message: TriTimeEvent) -> None:
         libtt.store_badges(badges)
         libtt.tabulate_badge(message.badge_num)
         update_badges = True
-    elif message.event_type == 'badge_sync':
+    elif message.event_type == 'badges_sync':
         badge_data = message.details
         libtt.store_badges(badge_data)
         update_badges = True
