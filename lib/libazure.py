@@ -3,6 +3,8 @@ import json
 import logging
 import threading
 
+from . import tritime
+
 from datetime import datetime
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 from typing import Callable, Any, Optional, Dict
@@ -17,16 +19,25 @@ class TriTimeEvent:
    system_id: str
    badge_num: str
    event_type: str
-   # Copilot, how do I specify a datetime type?
-   ts: datetime = field(
-        metadata={"encoder": lambda x: x.isoformat()}
-    )
-   details: Dict
+   ts: datetime
+   details: Any
 
    def to_json(self):
-       data = asdict(self)
-       data['ts'] = self.ts.isoformat()
-       return json.dumps(data)
+       return json.dumps({
+           'system_id': self.system_id,
+           'badge_num': self.badge_num,
+           'event_type': self.event_type,
+           'ts': self.ts.isoformat(),
+           'details': self.details
+       })
+
+   @classmethod
+   def json_serializer(clazz, obj):
+       if isinstance(obj, datetime):
+           return obj.isoformat()
+       if isinstance(obj, TriTimeEvent):
+           return asdict(obj)
+       raise TypeError("Type not serializable")
 
    @classmethod
    def from_json(clazz, json_str):
@@ -51,13 +62,20 @@ class TriTimeEvent:
        )
        return obj
 
+class TriTimeEventEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, TriTimeEvent):
+            return asdict(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
 # Module level variables
 message_queue = Queue()
 should_run = threading.Event()
 receiver_thread = None
 sender_thread = None
 logger = logging.getLogger(__name__)
-
 
 
 def system_id() -> str:
@@ -89,22 +107,22 @@ def receive_subscription_messages(handler: Callable) -> None:
                 try:
                     messages = receiver.receive_messages(max_message_count=10, max_wait_time=5)
                     for msg in messages:
-                        try:
-                            # json_str = msg.body.decode('utf-8')
-                            json_str = b''.join(msg.body).decode('utf-8')
-                            obj: TriTimeEvent = TriTimeEvent.from_json(json_str)
-                            # Skip processing our own messages
-                            # And while this can be configured in Azure, it's a
-                            # good idea to have a backup check
-                            if obj.system_id != system_id():
-                                handler(obj)
-                            receiver.complete_message(msg)
-                        except Exception as e:
-                            logger.error(f"Error processing message: {e}")
-                            receiver.abandon_message(msg)
-                            raise e
+                        print('msg received from queue')
+                        # json_str = msg.body.decode('utf-8')
+                        json_str = b''.join(msg.body).decode('utf-8')
+                        print(f"received json_str: {json_str}")
+                        obj: TriTimeEvent = TriTimeEvent.from_json(json_str)
+                        # Skip processing our own messages
+                        # And while this can be configured in Azure, it's a
+                        # good idea to have a backup check
+                        if obj.system_id != system_id():
+                            print('processing the message')
+                            handler(obj)
+                        print('marking message completed in queu')
+                        receiver.complete_message(msg)
                 except Exception as e:
                     logger.error(f"Error receiving messages: {e}")
+                    raise e
 
 def publish_outgoing_messages() -> None:
     config = get_config()
@@ -118,7 +136,9 @@ def publish_outgoing_messages() -> None:
                         sleep(0.1)
                         continue
                     message: TriTimeEvent = message_queue.get(timeout=1)
-                    json_str = message.to_json()
+                    print(f"jsonning message: {message}")
+                    json_str = json.dumps(message, default=TriTimeEvent.json_serializer)
+                    print(f"sending json_str: {json_str}")
                     msg = ServiceBusMessage(json_str)
                     sender.send_messages(msg)
                 except Exception as e:
@@ -154,7 +174,30 @@ def stop() -> None:
     if sender_thread:
         sender_thread.join()
 
-def send_message(message: TriTimeEvent) -> None:
+def publish_data() -> None:
+    """This system will publish its stored data to the service bus
+       so other systems can sync up to it."""
+    badges = tritime.get_badges()
+    message = TriTimeEvent(
+        system_id=system_id(),
+        badge_num=None,
+        event_type='badges_sync',
+        ts=datetime.now(),
+        details=badges,
+    )
+    queue_message(message)
+    for num in badges.keys():
+        pd = tritime.read_punches(num)
+        message = TriTimeEvent(
+            system_id=system_id(),
+            badge_num=num,
+            event_type='punch_data_sync',
+            ts=datetime.now(),
+            details=pd,
+        )
+        queue_message(message)
+
+
+def queue_message(message: TriTimeEvent) -> None:
     """Add message to the outgoing queue."""
-    payload = json.dumps(message, sort_keys=True, indent=4)
-    message_queue.put(payload)
+    message_queue.put(message)
