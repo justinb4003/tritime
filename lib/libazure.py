@@ -3,6 +3,8 @@ import json
 import logging
 import threading
 
+from . import tritime
+
 from datetime import datetime
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 from typing import Callable, Any, Optional, Dict
@@ -17,16 +19,10 @@ class TriTimeEvent:
    system_id: str
    badge_num: str
    event_type: str
-   # Copilot, how do I specify a datetime type?
    ts: datetime = field(
         metadata={"encoder": lambda x: x.isoformat()}
     )
-   details: Dict
-
-   def to_json(self):
-       data = asdict(self)
-       data['ts'] = self.ts.isoformat()
-       return json.dumps(data)
+   details: Any
 
    @classmethod
    def from_json(clazz, json_str):
@@ -51,13 +47,20 @@ class TriTimeEvent:
        )
        return obj
 
+class TriTimeEventEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, TriTimeEvent):
+            return asdict(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
 # Module level variables
 message_queue = Queue()
 should_run = threading.Event()
 receiver_thread = None
 sender_thread = None
 logger = logging.getLogger(__name__)
-
 
 
 def system_id() -> str:
@@ -118,7 +121,8 @@ def publish_outgoing_messages() -> None:
                         sleep(0.1)
                         continue
                     message: TriTimeEvent = message_queue.get(timeout=1)
-                    json_str = message.to_json()
+                    print(f"jsonning message: {message}")
+                    json_str = message
                     msg = ServiceBusMessage(json_str)
                     sender.send_messages(msg)
                 except Exception as e:
@@ -154,7 +158,31 @@ def stop() -> None:
     if sender_thread:
         sender_thread.join()
 
+def publish_data() -> None:
+    """This system will publish its stored data to the service bus
+       so other systems can sync up to it."""
+    badges = tritime.get_badges()
+    message = TriTimeEvent(
+        system_id=system_id(),
+        badge_num=None,
+        event_type='badges_sync',
+        ts=datetime.now(),
+        details=badges,
+    )
+    send_message(message)
+    for num in badges.keys():
+        pd = tritime.read_punches(num)
+        message = TriTimeEvent(
+            system_id=system_id(),
+            badge_num=num,
+            event_type='punch_data_sync',
+            ts=datetime.now(),
+            details=pd,
+        )
+        send_message(message)
+
+
 def send_message(message: TriTimeEvent) -> None:
     """Add message to the outgoing queue."""
-    payload = json.dumps(message, sort_keys=True, indent=4)
+    payload = json.dumps(message, sort_keys=True, indent=4, cls=TriTimeEventEncoder)
     message_queue.put(payload)

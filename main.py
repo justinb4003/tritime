@@ -487,6 +487,10 @@ class MainWindow(wx.Frame):
             libtt.fix_badges()
             return
 
+        if badge_num == 'publishdata':
+            if azure_enabled():
+                libaz.publish_data()
+
         if badge_num == 'debug':
             import wx.lib.inspection
             wx.lib.inspection.InspectionTool().Show()
@@ -880,14 +884,26 @@ def azure_enabled() -> bool:
 
 def azure_message_handler(frame: MainWindow, message: TriTimeEvent) -> None:
     # message: TriTimeEvent = TriTimeEvent.from_dict(payload)
+    update_badges = False
     if message.event_type == 'punch_in':
         badges = libtt.punch_in(message.badge_num, message.ts)
         libtt.store_badges(badges)
+        update_badges = True
     elif message.event_type == 'punch_out':
         badges = libtt.punch_out(message.badge_num, message.ts)
         libtt.store_badges(badges)
         libtt.tabulate_badge(message.badge_num)
-    wx.CallAfter(frame.update_active_badges)
+        update_badges = True
+    elif message.event_type == 'badge_sync':
+        badge_data = message.details
+        libtt.store_badges(badge_data)
+        update_badges = True
+    elif message.event_type == 'punch_data_sync':
+        badge_num = message.badge_num
+        punch_data = message.details
+        libtt.write_punches(badge_num, punch_data)
+    if update_badges:
+        wx.CallAfter(frame.update_active_badges)
 
 # Here's how we fire up the wxPython app
 if __name__ == '__main__':
