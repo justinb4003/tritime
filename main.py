@@ -97,7 +97,7 @@ def is_json(myjson):
 
 
 # If we have a URL (http:// or https://), download the image from the URL
-def download_image(self, url, width=64, height=64):
+def download_image(url, width=64, height=64):
     # This method is a hot mess and needs to be cleaned up.
     image = wx.Image()
     image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
@@ -212,6 +212,7 @@ class MainWindow(wx.Frame):
         self.punch_all_out_btn = wx.Button(self, label='Punch All Out!',
                                            size=btn_size)
         self.punch_all_out_btn.Bind(wx.EVT_BUTTON, self.punch_all_out)
+        self.punch_all_out_btn.Hide()
 
         self.edit_settings_btn = wx.Button(self, label='Settings...',
                                            size=btn_size)
@@ -400,13 +401,8 @@ class MainWindow(wx.Frame):
             img.LoadFile(cached_image_filename, wx.BITMAP_TYPE_PNG)
         # Otherwise we can download the image from the URL
         else:
-            img_url = badge['photo_url']
-            img, should_cache = download_image(parent, img_url)
-            if should_cache:
-                if not os.path.exists('cached_photos'):
-                    os.makedirs('cached_photos')
-                img.SaveFile(f'cached_photos/{badge_num}.png',
-                             wx.BITMAP_TYPE_PNG)
+            img = wx.Image()
+            img.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
         img = wx.Bitmap(img)
         bmp = wx.StaticBitmap(parent, -1, img)
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -852,8 +848,25 @@ class MainWindow(wx.Frame):
                                   .Format('%H:%M')
                      if auto_out_chk.IsChecked() else None),
         ]
+
+        badges = libtt.get_badges()
+        pic_download_gauge = wx.Gauge(self.settings_dlg, range=len(badges))
+        download_status = wx.StaticText(self.settings_dlg, label='')
+        cache_clear_btn = wx.Button(self.settings_dlg, label='Update Image Cache', size=(160, 100))
+        cache_clear_btn.Bind(wx.EVT_BUTTON,
+                             lambda event: self.update_image_cache(event,
+                                                                   pic_download_gauge,
+                                                                   download_status))
+
         spacer_size = 20
         vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(cache_clear_btn)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(download_status)
+        vbox.AddSpacer(5)
+        vbox.Add(pic_download_gauge)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(allow_all_out_chk)
         vbox.AddSpacer(spacer_size)
         vbox.Add(show_active_badges_chk)
@@ -880,6 +893,30 @@ class MainWindow(wx.Frame):
         self.settings_dlg.Update()
         self.settings_dlg.ShowModal()
         self.settings_dlg.Destroy()
+
+    def update_image_cache(self, event, gauge, status):
+        import shutil
+        shutil.rmtree('cached_photos')
+        os.makedirs('cached_photos')
+        self.download_all_images(gauge, status)
+
+    def download_all_images(self, gauge: wx.Gauge, status: wx.StaticText):
+        badges = libtt.get_badges()
+        status.SetLabel(f'0 of {len(badges)} images downloaded')
+        for idx, (badge_num, badge) in enumerate(badges.items()):
+            time.sleep(0.1)
+            img_url = badge['photo_url']
+            img, should_cache = download_image(img_url)
+            if should_cache:
+                if not os.path.exists('cached_photos'):
+                    os.makedirs('cached_photos')
+                img.SaveFile(f'cached_photos/{badge_num}.png',
+                             wx.BITMAP_TYPE_PNG)
+            gauge.SetValue(idx)
+            status.SetLabel(f'{idx+1} of {len(badges)} images downloaded')
+            wx.Yield()
+        return
+
 
 
 def azure_enabled() -> bool:
