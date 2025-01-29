@@ -283,7 +283,7 @@ class MainWindow(wx.Frame):
         hbox_badgde_input.Add(self.badge_clear_btn)
 
         vbox.AddSpacer(spacer_size)
-        vbox.Add(hbox_top, 1, wx.EXPAND)
+        vbox.Add(hbox_top, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_badgde_input, 1, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
