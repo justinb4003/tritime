@@ -289,13 +289,13 @@ class MainWindow(wx.Frame):
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(hbox_buttons_checkgrid, 0, wx.EXPAND)
+        vbox.Add(hbox_buttons_checkgrid, 2, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
 
         # TODO: Add check time grid back somewhere
 
         outerhbox.AddSpacer(spacer_size)
-        outerhbox.Add(vbox, wx.EXPAND)
+        outerhbox.Add(vbox, 1, wx.EXPAND)
         outerhbox.AddSpacer(spacer_size)
         self.outerhbox = outerhbox
         # Add sizer to panel
@@ -382,6 +382,8 @@ class MainWindow(wx.Frame):
         if _app_settings['show_active_badges'] is False:
             return
         badges = libtt.get_badges()
+        # Sort by the display name
+        badges = dict(sorted(badges.items(), key=lambda x: x[1]['display_name']))
         for bnum, badge in badges.items():
             if badge['status'] == 'in':
                 self.add_badge_to_grid(bnum)
@@ -741,7 +743,9 @@ class MainWindow(wx.Frame):
     @return_focus
     def find_user(self, event):
         self.update_active_badges()
-        self.find_user_badges = libtt.get_badges()
+        badges = libtt.get_badges()
+        badges = dict(sorted(badges.items(), key=lambda x: x[1]['display_name']))
+        self.find_user_badges = badges
         if len(self.find_user_badges) == 0:
             wx.MessageBox('There are no users in the system.',
                           'Error', wx.OK | wx.ICON_ERROR)
