@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 name: Windows x64 Release Build - Azure Enabled
-=======
-name: Windows x64 Release Build
->>>>>>> main
 
 on:
   push:
@@ -18,13 +14,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-<<<<<<< HEAD
-=======
     - name: Update version
       run: |
         echo "VERSION = '${{ github.ref_name }}'" > version.py
 
->>>>>>> main
     - name: Package Application
       uses: JackMcKew/pyinstaller-action-windows@main
       with:
