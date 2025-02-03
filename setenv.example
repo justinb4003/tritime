@@ -1,0 +1,4 @@
+export AZURE_ENABLED="true"
+export AZURE_SERVICE_BUS_CONNECTION_STRING="Endpoint=sb://..."
+export AZURE_SERVICE_BUS_TOPIC_NAME="trisonics4003"
+export SYSTEM_ID="round_room"

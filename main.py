@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
+#i!/usr/bin/env python3
 
 # TODO: Finish settings dialog next
 
 import os
 import wx
+import sys
 import wx.adv
 import json
 import time
@@ -11,7 +12,10 @@ import requests
 import wx.grid as wxgrid
 import lib.tritime as libtt
 import lib.trireport as libtr
+import lib.libazure as libaz
 
+from version import VERSION
+from lib.libazure import TriTimeEvent
 from functools import wraps
 from io import BytesIO
 from threading import Thread, Timer
@@ -64,6 +68,9 @@ def debounce(wait_time):
         return debounced
     return decorator
 
+def system_id() -> str:
+    return os.environ.get('SYSTEM_ID', '')
+
 
 def get_app_settings():
     try:
@@ -91,7 +98,7 @@ def is_json(myjson):
 
 
 # If we have a URL (http:// or https://), download the image from the URL
-def download_image(self, url, width=64, height=64):
+def download_image(url, width=64, height=64):
     # This method is a hot mess and needs to be cleaned up.
     image = wx.Image()
     image.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
@@ -168,9 +175,11 @@ class MainWindow(wx.Frame):
     # Set up the main window for the application; this is where most controls
     # get laid out.
     def __init__(self, parent, id):
+        sysid = system_id()
         wx.Frame.__init__(self, parent, id,
-                          'TriTime', size=(1024, 800))
-        self.Maximize(True)
+                          f'TriTime ({sysid}) v{VERSION}', size=(1024, 800))
+        if hasattr(sys, 'frozen'):
+            self.Maximize(True)
         bni_style = wx.TE_PROCESS_ENTER | wx.TE_MULTILINE
         self.badge_num_input = DebouncedTextCtrl(self, -1, '',
                                                  delay=0.2,
@@ -204,6 +213,7 @@ class MainWindow(wx.Frame):
         self.punch_all_out_btn = wx.Button(self, label='Punch All Out!',
                                            size=btn_size)
         self.punch_all_out_btn.Bind(wx.EVT_BUTTON, self.punch_all_out)
+        self.punch_all_out_btn.Hide()
 
         self.edit_settings_btn = wx.Button(self, label='Settings...',
                                            size=btn_size)
@@ -220,8 +230,9 @@ class MainWindow(wx.Frame):
         # Create a grid that lets us show everybody punched in
         self.active_badge_sizer = wx.WrapSizer(wx.HORIZONTAL)
         self.badge_scroller = wx.ScrolledWindow(self)
+        self.badge_scroller.Bind(wx.EVT_LEFT_DOWN, self.on_panel_click)
         self.badge_scroller.SetScrollRate(10, 10)
-        self.badge_scroller.SetMinSize((800, 600))
+        self.badge_scroller.SetMinSize((600, 300))
         self.badge_scroller.SetSizer(self.active_badge_sizer)
 
         spacer_size = 20
@@ -273,19 +284,19 @@ class MainWindow(wx.Frame):
         hbox_badgde_input.Add(self.badge_clear_btn)
 
         vbox.AddSpacer(spacer_size)
-        vbox.Add(hbox_top, 1, wx.EXPAND)
+        vbox.Add(hbox_top, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
         vbox.Add(hbox_badgde_input, 1, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
         vbox.Add(self.greeting_label, 0, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
-        vbox.Add(hbox_buttons_checkgrid, 0, wx.EXPAND)
+        vbox.Add(hbox_buttons_checkgrid, 2, wx.EXPAND)
         vbox.AddSpacer(spacer_size)
 
         # TODO: Add check time grid back somewhere
 
         outerhbox.AddSpacer(spacer_size)
-        outerhbox.Add(vbox, wx.EXPAND)
+        outerhbox.Add(vbox, 1, wx.EXPAND)
         outerhbox.AddSpacer(spacer_size)
         self.outerhbox = outerhbox
         # Add sizer to panel
@@ -310,6 +321,8 @@ class MainWindow(wx.Frame):
         self.shutdown()
 
     def shutdown(self):
+        if azure_enabled():
+            libaz.stop()
         self.clock_thread_run = False
         self.clock_thread.join()
         self.Destroy()
@@ -370,6 +383,8 @@ class MainWindow(wx.Frame):
         if _app_settings['show_active_badges'] is False:
             return
         badges = libtt.get_badges()
+        # Sort by the display name
+        badges = dict(sorted(badges.items(), key=lambda x: x[1]['display_name']))
         for bnum, badge in badges.items():
             if badge['status'] == 'in':
                 self.add_badge_to_grid(bnum)
@@ -389,13 +404,8 @@ class MainWindow(wx.Frame):
             img.LoadFile(cached_image_filename, wx.BITMAP_TYPE_PNG)
         # Otherwise we can download the image from the URL
         else:
-            img_url = badge['photo_url']
-            img, should_cache = download_image(parent, img_url)
-            if should_cache:
-                if not os.path.exists('cached_photos'):
-                    os.makedirs('cached_photos')
-                img.SaveFile(f'cached_photos/{badge_num}.png',
-                             wx.BITMAP_TYPE_PNG)
+            img = wx.Image()
+            img.LoadFile('unknown_badge.png', wx.BITMAP_TYPE_PNG)
         img = wx.Bitmap(img)
         bmp = wx.StaticBitmap(parent, -1, img)
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -469,6 +479,7 @@ class MainWindow(wx.Frame):
     # reconfig the whole system in a jiffy!
     @return_focus
     def on_badge_num_enter(self, event, badge_num=None):
+        print('enter event handler hit')
         if badge_num is None:
             badge_num = self.get_entered_badge()
 
@@ -478,6 +489,10 @@ class MainWindow(wx.Frame):
         if badge_num == 'fixbadges':
             libtt.fix_badges()
             return
+
+        if badge_num == 'publishdata':
+            if azure_enabled():
+                libaz.publish_data()
 
         if badge_num == 'debug':
             import wx.lib.inspection
@@ -517,6 +532,15 @@ class MainWindow(wx.Frame):
         badge = self.get_entered_badge()
         dt = datetime.now()
         badges = libtt.punch_in(badge, dt)
+        if azure_enabled():
+            msg = TriTimeEvent(
+                system_id=system_id(),
+                badge_num=badge,
+                event_type='punch_in',
+                ts=dt,
+                details={}
+            )
+            libaz.message_queue.put(msg)
         libtt.store_badges(badges)
         self.add_badge_to_grid(badge)
         self.clear_input()
@@ -533,6 +557,15 @@ class MainWindow(wx.Frame):
         badges = libtt.punch_out(badge, dt)
         libtt.store_badges(badges)
         libtt.tabulate_badge(badge)
+        if azure_enabled():
+            msg = TriTimeEvent(
+                system_id=system_id(),
+                badge_num=badge_num,
+                event_type='punch_out',
+                ts=dt,
+                details={}
+            )
+            libaz.message_queue.put(msg)
         self.update_active_badges()
         self.clear_input()
 
@@ -710,7 +743,10 @@ class MainWindow(wx.Frame):
 
     @return_focus
     def find_user(self, event):
-        self.find_user_badges = libtt.get_badges()
+        self.update_active_badges()
+        badges = libtt.get_badges()
+        badges = dict(sorted(badges.items(), key=lambda x: x[1]['display_name']))
+        self.find_user_badges = badges
         if len(self.find_user_badges) == 0:
             wx.MessageBox('There are no users in the system.',
                           'Error', wx.OK | wx.ICON_ERROR)
@@ -744,6 +780,31 @@ class MainWindow(wx.Frame):
         for badge_num, badge in libtt.get_badges().items():
             if badge['status'] == 'in':
                 self.punch_out(None, badge_num)
+
+    def add_azure_settings(self, dlg, vbox, spacer_size, keys, vfuncs):
+        # create text inputs for machine name, system name, and endpoint then
+        # add them to the fbox with a spacer_sized's spacer between them.
+        machine_name_label = wx.StaticText(dlg, label='Machine Name')
+        machine_name_input = wx.TextCtrl(dlg, size=(200, -1))
+        system_name_label = wx.StaticText(dlg, label='System Name')
+        system_name_input = wx.TextCtrl(dlg, size=(200, -1))
+        endpoint_label = wx.StaticText(dlg, label='Endpoint')
+        endpoint_input = wx.TextCtrl(dlg, size=(400, -1))
+        keys.extend(['machine_name', 'system_name', 'endpoint'])
+        vfuncs.extend([
+            machine_name_input.GetValue,
+            system_name_input.GetValue,
+            endpoint_input.GetValue,
+        ])
+        vbox.Add(machine_name_label)
+        vbox.Add(machine_name_input)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(system_name_label)
+        vbox.Add(system_name_input)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(endpoint_label)
+        vbox.Add(endpoint_input)
+        vbox.AddSpacer(spacer_size)
 
     def submit_settings(self, event, keys: list, vfuncs: list):
         for k, v in zip(keys, vfuncs):
@@ -792,8 +853,25 @@ class MainWindow(wx.Frame):
                                   .Format('%H:%M')
                      if auto_out_chk.IsChecked() else None),
         ]
+
+        badges = libtt.get_badges()
+        pic_download_gauge = wx.Gauge(self.settings_dlg, range=len(badges))
+        download_status = wx.StaticText(self.settings_dlg, label='')
+        cache_clear_btn = wx.Button(self.settings_dlg, label='Update Image Cache', size=(160, 100))
+        cache_clear_btn.Bind(wx.EVT_BUTTON,
+                             lambda event: self.update_image_cache(event,
+                                                                   pic_download_gauge,
+                                                                   download_status))
+
         spacer_size = 20
         vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(cache_clear_btn)
+        vbox.AddSpacer(spacer_size)
+        vbox.Add(download_status)
+        vbox.AddSpacer(5)
+        vbox.Add(pic_download_gauge)
+        vbox.AddSpacer(spacer_size)
         vbox.Add(allow_all_out_chk)
         vbox.AddSpacer(spacer_size)
         vbox.Add(show_active_badges_chk)
@@ -805,6 +883,8 @@ class MainWindow(wx.Frame):
 
         auto_out_time.Enable(event.IsChecked())
         # Add extra settings here
+        self.add_azure_settings(self.settings_dlg, vbox, spacer_size,
+                                keys, control_values)
         # END Extra settings
 
         vbox.Add(submit_btn)
@@ -819,6 +899,57 @@ class MainWindow(wx.Frame):
         self.settings_dlg.ShowModal()
         self.settings_dlg.Destroy()
 
+    def update_image_cache(self, event, gauge, status):
+        import shutil
+        shutil.rmtree('cached_photos')
+        os.makedirs('cached_photos')
+        self.download_all_images(gauge, status)
+
+    def download_all_images(self, gauge: wx.Gauge, status: wx.StaticText):
+        badges = libtt.get_badges()
+        status.SetLabel(f'0 of {len(badges)} images downloaded')
+        for idx, (badge_num, badge) in enumerate(badges.items()):
+            time.sleep(0.1)
+            img_url = badge['photo_url']
+            img, should_cache = download_image(img_url)
+            if should_cache:
+                if not os.path.exists('cached_photos'):
+                    os.makedirs('cached_photos')
+                img.SaveFile(f'cached_photos/{badge_num}.png',
+                             wx.BITMAP_TYPE_PNG)
+            gauge.SetValue(idx)
+            status.SetLabel(f'{idx+1} of {len(badges)} images downloaded')
+            wx.Yield()
+        return
+
+
+
+def azure_enabled() -> bool:
+    v = os.environ.get('AZURE_ENABLED', 'false')
+    return v.lower() == 'true'
+
+def azure_message_handler(frame: MainWindow, message: TriTimeEvent) -> None:
+    # message: TriTimeEvent = TriTimeEvent.from_dict(payload)
+    update_badges = False
+    if message.event_type == 'punch_in':
+        badges = libtt.punch_in(message.badge_num, message.ts)
+        libtt.store_badges(badges)
+        update_badges = True
+    elif message.event_type == 'punch_out':
+        badges = libtt.punch_out(message.badge_num, message.ts)
+        libtt.store_badges(badges)
+        libtt.tabulate_badge(message.badge_num)
+        update_badges = True
+    elif message.event_type == 'badges_sync':
+        badge_data = message.details
+        libtt.store_badges(badge_data)
+        update_badges = True
+    elif message.event_type == 'punch_data_sync':
+        badge_num = message.badge_num
+        punch_data = message.details
+        libtt.write_punches(badge_num, punch_data)
+    if update_badges:
+        wx.CallAfter(frame.update_active_badges)
 
 # Here's how we fire up the wxPython app
 if __name__ == '__main__':
@@ -832,5 +963,7 @@ if __name__ == '__main__':
         store_app_settings()
     app = wx.App()
     frame = MainWindow(parent=None, id=-1)
+    if azure_enabled():
+        libaz.start(lambda payload: azure_message_handler(frame, payload))
     frame.Show()
     app.MainLoop()
