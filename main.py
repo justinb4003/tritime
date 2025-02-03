@@ -14,6 +14,7 @@ import lib.tritime as libtt
 import lib.trireport as libtr
 import lib.libazure as libaz
 
+from version import VERSION
 from lib.libazure import TriTimeEvent
 from functools import wraps
 from io import BytesIO
@@ -176,7 +177,7 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, id):
         sysid = system_id()
         wx.Frame.__init__(self, parent, id,
-                          f'TriTime ({sysid})', size=(1024, 800))
+                          f'TriTime ({sysid}) v{VERSION}', size=(1024, 800))
         if hasattr(sys, 'frozen'):
             self.Maximize(True)
         bni_style = wx.TE_PROCESS_ENTER | wx.TE_MULTILINE
